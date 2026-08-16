@@ -1,0 +1,1810 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Footprint — Personal Carbon Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+  <style>
+    :root {
+      --bg: #0f1613; --bg-2: #131b17;
+      --surface: #1a231e; --surface-2: #212c26;
+      --line: rgba(237,232,219,0.1); --line-2: rgba(237,232,219,0.06);
+      --ink: #ede8db; --muted: #8a938c; --muted-2: #5d655f;
+      --accent: #7ac678; --accent-ink: #0a1a09;
+      --accent-soft: rgba(122,198,120,0.14);
+      --transport: #7fb5e6; --energy: #e8b04b; --food: #7ac678; --goods: #b98acb;
+      --danger: #e07868; --warn: #e8b04b; --good: #7ac678;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      background: radial-gradient(900px 500px at 80% -10%, rgba(122,198,120,0.09), transparent 55%),
+                  radial-gradient(700px 500px at -8% 20%, rgba(127,181,230,0.06), transparent 55%), var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5; -webkit-font-smoothing: antialiased;
+    }
+    ::selection { background: var(--accent); color: var(--accent-ink); }
+    .num { font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace; font-variant-numeric: tabular-nums; }
+    a { color: inherit; } button { font-family: inherit; }
+    [hidden] { display: none !important; }
+
+    /* ---- global loading ---- */
+    .boot {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: var(--bg); z-index: 100; flex-direction: column; gap: 1rem;
+    }
+    .spinner {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 2px solid var(--line); border-top-color: var(--accent);
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .boot-note { font-size: 0.82rem; color: var(--muted); }
+
+    /* ===================== AUTH SCREEN ===================== */
+    .auth-screen { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
+    @media (max-width: 820px) { .auth-screen { grid-template-columns: 1fr; } }
+
+    .auth-brand {
+      background: radial-gradient(500px 500px at 30% 30%, rgba(122,198,120,0.18), transparent 60%),
+                  radial-gradient(400px 400px at 80% 80%, rgba(127,181,230,0.12), transparent 60%), var(--bg-2);
+      border-right: 1px solid var(--line);
+      padding: 3rem 3rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 100vh;
+    }
+    @media (max-width: 820px) { .auth-brand { min-height: 0; padding: 2rem 1.5rem; border-right: none; border-bottom: 1px solid var(--line); } }
+
+    .brand-lockup { display: flex; align-items: center; gap: 0.7rem; }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--transport));
+      display: flex; align-items: center; justify-content: center; font-size: 1.15rem;
+    }
+    .brand-name { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.01em; }
+
+    .auth-brand h1 {
+      font-family: Georgia, serif; font-weight: 400;
+      font-size: clamp(2.2rem, 4.2vw, 3rem);
+      margin: 3rem 0 1rem; text-wrap: balance; letter-spacing: -0.015em;
+    }
+    .auth-brand h1 em { color: var(--accent); font-style: normal; }
+    .auth-brand p.lede { color: var(--muted); max-width: 42ch; margin: 0; font-size: 1rem; }
+
+    .brand-bullets { display: grid; gap: 0.9rem; margin-top: 2.5rem; }
+    .brand-bullet { display: flex; gap: 0.9rem; align-items: flex-start; font-size: 0.9rem; }
+    .brand-bullet .bmk {
+      width: 1.7rem; height: 1.7rem; flex: none; border-radius: 50%;
+      background: var(--accent-soft); color: var(--accent);
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700;
+    }
+    .brand-bullet b { color: var(--ink); font-weight: 600; }
+    .brand-bullet span { color: var(--muted); }
+
+    .brand-foot { color: var(--muted-2); font-size: 0.76rem; margin-top: 2rem; }
+
+    .auth-form-wrap { padding: 3rem 2.5rem; display: flex; align-items: center; justify-content: center; }
+    @media (max-width: 820px) { .auth-form-wrap { padding: 2.5rem 1.5rem; } }
+    .auth-card { width: 100%; max-width: 380px; }
+
+    .auth-tabs {
+      display: flex; gap: 0.2rem; padding: 0.25rem;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 10px; margin-bottom: 1.75rem;
+    }
+    .auth-tab {
+      flex: 1; background: none; border: none; color: var(--muted);
+      padding: 0.55rem 0.9rem; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600;
+    }
+    .auth-tab[aria-selected="true"] { background: var(--surface-2); color: var(--ink); }
+    .auth-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .auth-form h2 { font-family: Georgia, serif; font-weight: 400; margin: 0 0 0.4rem; font-size: 1.5rem; }
+    .auth-form p.sub { color: var(--muted); font-size: 0.88rem; margin: 0 0 1.4rem; }
+
+    .field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.9rem; }
+    .field label { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    input, select, textarea {
+      background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+      border-radius: 8px; padding: 0.6rem 0.7rem; font-size: 0.92rem; font-family: inherit; width: 100%;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    input::placeholder { color: var(--muted-2); }
+
+    button.primary {
+      background: var(--accent); color: var(--accent-ink); border: none;
+      border-radius: 8px; padding: 0.65rem 1.15rem; font-size: 0.92rem;
+      font-weight: 700; cursor: pointer; width: 100%;
+    }
+    button.primary:hover { filter: brightness(1.06); }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.ghost {
+      background: none; border: 1px solid var(--line); color: var(--ink);
+      border-radius: 8px; padding: 0.5rem 0.9rem; font-size: 0.85rem; cursor: pointer;
+    }
+    button.ghost:hover { border-color: var(--accent); }
+
+    .msg { font-size: 0.83rem; padding: 0.6rem 0.8rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+    .msg.show { display: block; }
+    .msg.err { background: rgba(224,120,104,0.12); color: var(--danger); border: 1px solid rgba(224,120,104,0.3); }
+    .msg.ok  { background: rgba(122,198,120,0.12); color: var(--accent); border: 1px solid rgba(122,198,120,0.3); }
+
+    .auth-disclaimer { font-size: 0.72rem; color: var(--muted-2); margin-top: 1.4rem; line-height: 1.5; }
+
+    /* ===================== APP SHELL ===================== */
+    .app-shell { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px; flex: none;
+      background: var(--bg-2); border-right: 1px solid var(--line);
+      padding: 1.4rem 1rem 1.2rem;
+      display: flex; flex-direction: column; gap: 1.4rem;
+      position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    }
+    @media (max-width: 780px) {
+      .app-shell { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--line); }
+    }
+
+    .side-brand { display: flex; align-items: center; gap: 0.6rem; padding: 0 0.4rem; }
+
+    nav.navlist { display: flex; flex-direction: column; gap: 0.15rem; }
+    .navitem {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.6rem 0.7rem; border-radius: 8px; font-size: 0.88rem;
+      color: var(--muted); cursor: pointer; border: 1px solid transparent;
+      background: none; width: 100%; text-align: left; font-family: inherit;
+    }
+    .navitem:hover { background: var(--surface); color: var(--ink); }
+    .navitem[aria-current="true"] { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+    .navitem .ico {
+      width: 1.1rem; height: 1.1rem; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--muted-2);
+    }
+    .navitem[aria-current="true"] .ico { color: var(--accent); }
+
+    .side-foot {
+      margin-top: auto; display: flex; flex-direction: column; gap: 0.4rem;
+      padding: 0.7rem; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 10px;
+    }
+    .side-user { display: flex; align-items: center; gap: 0.6rem; }
+    .side-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--transport));
+      color: var(--accent-ink); font-weight: 800; font-size: 0.88rem;
+      display: flex; align-items: center; justify-content: center; flex: none;
+    }
+    .side-user-info { min-width: 0; flex: 1; }
+    .side-user-name { font-size: 0.87rem; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .side-user-email { font-size: 0.72rem; color: var(--muted-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ===================== MAIN ===================== */
+    .main { flex: 1; min-width: 0; padding: 1.5rem 2.2rem 4rem; }
+    @media (max-width: 780px) { .main { padding: 1.25rem 1.25rem 3rem; } }
+
+    .view-head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .view-head h1 { font-family: Georgia, serif; font-weight: 400; font-size: 1.75rem; margin: 0; letter-spacing: -0.01em; }
+    .view-head .hint { color: var(--muted); font-size: 0.86rem; }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.3rem 1.4rem; }
+    .panel + .panel { margin-top: 1.15rem; }
+    .panel-title {
+      font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); font-weight: 700; margin: 0 0 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 0.5rem;
+    }
+    .panel-title .src { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted-2); font-size: 0.72rem; }
+    .panel-note { font-size: 0.85rem; color: var(--muted); margin: -0.4rem 0 1rem; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.2rem; }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+    .stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1.05rem 1.15rem; }
+    .stat-label { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.45rem; }
+    .stat-value { font-size: 1.65rem; font-weight: 800; letter-spacing: -0.01em; }
+    .stat-value small { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
+    .stat-note { font-size: 0.74rem; color: var(--muted-2); margin-top: 0.3rem; }
+    .stat-note.up { color: var(--danger); } .stat-note.down { color: var(--good); }
+
+    .grid-2 { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.2rem; align-items: start; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+    canvas { width: 100%; display: block; }
+
+    .bd-row { display: grid; grid-template-columns: 8rem 1fr 5.5rem; align-items: center; gap: 0.7rem; margin-bottom: 0.65rem; font-size: 0.85rem; }
+    .bd-track { height: 8px; background: rgba(237,232,219,0.06); border-radius: 999px; overflow: hidden; }
+    .bd-fill { height: 100%; border-radius: 999px; }
+    .bd-value { text-align: right; color: var(--muted); }
+
+    .pill-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+    .pill {
+      border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+      font-size: 0.82rem; font-weight: 600; padding: 0.42rem 0.9rem;
+      border-radius: 999px; cursor: pointer;
+    }
+    .pill[aria-pressed="true"] { color: var(--accent-ink); border-color: transparent; }
+    .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .field-row { display: flex; gap: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+    .field-row .field { flex: 1; min-width: 130px; margin-bottom: 0; }
+    .preview-line { font-size: 0.86rem; color: var(--muted); margin: 0.85rem 0; }
+    .preview-line b { color: var(--ink); font-size: 1.05rem; }
+
+    .presets { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
+    .preset {
+      border: 1px dashed var(--line); background: none; color: var(--muted);
+      font-size: 0.78rem; padding: 0.35rem 0.7rem; border-radius: 999px; cursor: pointer;
+    }
+    .preset:hover { border-style: solid; border-color: var(--accent); color: var(--ink); }
+
+    .tbl-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; min-width: 520px; }
+    thead th {
+      text-align: left; font-size: 0.66rem; letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--muted); font-weight: 700; padding: 0 0.5rem 0.55rem;
+      border-bottom: 1px solid var(--line);
+    }
+    tbody td { padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--line); }
+    tbody tr:hover { background: rgba(237,232,219,0.02); }
+    .cat-chip { font-size: 0.66rem; padding: 0.15rem 0.55rem; border-radius: 999px; font-weight: 700; }
+    .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.95rem; }
+    .del-btn:hover { color: var(--danger); }
+    .empty-note { color: var(--muted); font-size: 0.88rem; padding: 1.4rem 0; text-align: center; }
+
+    .goal-hero { display: grid; grid-template-columns: 12rem 1fr; gap: 1.5rem; align-items: center; }
+    @media (max-width: 640px) { .goal-hero { grid-template-columns: 1fr; text-align: center; } }
+    .ring-wrap { position: relative; width: 12rem; height: 12rem; margin: 0 auto; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-track { fill: none; stroke: var(--surface-2); stroke-width: 12; }
+    .ring-fill { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 0.5s; }
+    .ring-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none;
+    }
+    .ring-center .num { font-size: 1.8rem; font-weight: 800; }
+    .ring-center .lbl { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 0.3rem; }
+
+    .gauge {
+      position: relative; height: 10px; border-radius: 999px;
+      background: linear-gradient(to right, var(--good), var(--warn) 55%, var(--danger));
+      margin: 2.4rem 0 0.6rem;
+    }
+    .gauge-mk { position: absolute; top: -6px; width: 2px; height: 22px; background: var(--ink); opacity: 0.5; }
+    .gauge-mk-lbl {
+      position: absolute; top: -1.6rem; left: 50%; transform: translateX(-50%);
+      font-size: 0.66rem; color: var(--muted); white-space: nowrap;
+    }
+    .gauge-you {
+      position: absolute; top: -14px; width: 0; height: 0;
+      border-left: 7px solid transparent; border-right: 7px solid transparent;
+      border-top: 9px solid var(--ink); transform: translateX(-7px);
+    }
+    .gauge-you-lbl {
+      position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+      font-size: 0.72rem; font-weight: 700; color: var(--ink); white-space: nowrap;
+    }
+    .gauge-caption { font-size: 0.78rem; color: var(--muted); margin-top: 2rem; }
+
+    .insight { display: flex; gap: 1rem; align-items: flex-start; padding: 0.9rem 0; border-top: 1px solid var(--line); }
+    .insight:first-child { border-top: none; padding-top: 0; }
+    .insight-icon {
+      width: 2.3rem; height: 2.3rem; flex: none; border-radius: 8px;
+      background: var(--accent-soft); color: var(--accent);
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .insight h4 { margin: 0 0 0.2rem; font-size: 0.95rem; }
+    .insight p { margin: 0; font-size: 0.86rem; color: var(--muted); }
+
+    .danger-btn {
+      background: none; border: 1px solid rgba(224,120,104,0.4);
+      color: var(--danger); border-radius: 8px;
+      padding: 0.55rem 0.95rem; font-size: 0.85rem; cursor: pointer;
+    }
+    .danger-btn:hover { background: rgba(224,120,104,0.08); }
+
+    /* folders */
+    .folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+    .folder-card {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 12px; padding: 1.1rem 1.2rem;
+      cursor: pointer; transition: border-color 0.15s, transform 0.15s;
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .folder-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .folder-card-head { display: flex; align-items: center; gap: 0.6rem; }
+    .folder-icon {
+      width: 32px; height: 32px; flex: none; border-radius: 8px;
+      background: var(--accent-soft); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .folder-name { font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; }
+    .folder-meta { font-size: 0.78rem; color: var(--muted-2); }
+    .folder-total { font-size: 1.15rem; font-weight: 800; }
+    .folder-actions { display: flex; gap: 0.35rem; margin-top: 0.4rem; }
+    .folder-actions button { flex: 1; }
+    .empty-folders {
+      background: var(--surface); border: 1px dashed var(--line);
+      border-radius: 12px; padding: 3rem 1.5rem; text-align: center; color: var(--muted);
+    }
+
+    .ind-form { display: none; }
+    .ind-form.active { display: block; }
+    .folder-total-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.9rem 0.5rem 0; border-top: 1px solid var(--line); margin-top: 0.5rem;
+      font-size: 1rem;
+    }
+    .folder-total-row b { font-size: 1.25rem; font-weight: 800; }
+
+    /* toast */
+    .toast {
+      position: fixed; bottom: 1.25rem; left: 50%; transform: translateX(-50%);
+      background: var(--surface-2); border: 1px solid var(--line);
+      color: var(--ink); padding: 0.65rem 1rem; border-radius: 8px;
+      font-size: 0.85rem; display: none; z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+    .toast.show { display: block; }
+    .toast.err { border-color: rgba(224,120,104,0.4); color: var(--danger); }
+    .toast.ok  { border-color: rgba(122,198,120,0.4); color: var(--accent); }
+
+    ::-webkit-scrollbar { height: 8px; width: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(237,232,219,0.12); border-radius: 999px; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<div id="bootScreen" class="boot"><div class="spinner"></div><div class="boot-note">Loading Footprint…</div></div>
+
+<div id="toast" class="toast" role="status"></div>
+
+<!-- ========================= AUTH ========================= -->
+<div id="authScreen" class="auth-screen" hidden>
+  <div class="auth-brand">
+    <div>
+      <div class="brand-lockup"><div class="brand-mark">🌿</div><div class="brand-name">Footprint</div></div>
+      <h1>Track the carbon behind <em>everything you do.</em></h1>
+      <p class="lede">Your account is stored on the server — log in from any device and pick up where you left off.</p>
+      <div class="brand-bullets">
+        <div class="brand-bullet"><span class="bmk">1</span><div><b>Log in seconds.</b> <span>Presets for common activities.</span></div></div>
+        <div class="brand-bullet"><span class="bmk">2</span><div><b>See your trends.</b> <span>Daily totals, category breakdown, monthly chart.</span></div></div>
+        <div class="brand-bullet"><span class="bmk">3</span><div><b>Set a goal.</b> <span>Daily cap, streak counter, benchmark vs global averages.</span></div></div>
+      </div>
+    </div>
+    <div class="brand-foot">Uses DEFRA, CEA India and IPCC emission factors — indicative planning estimates, not a certified audit.</div>
+  </div>
+
+  <div class="auth-form-wrap">
+    <div class="auth-card">
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab" role="tab" data-mode="login" aria-selected="true">Log in</button>
+        <button class="auth-tab" role="tab" data-mode="signup" aria-selected="false">Sign up</button>
+      </div>
+
+      <form class="auth-form" id="loginForm" autocomplete="on">
+        <h2>Welcome back</h2>
+        <p class="sub">Sign in to sync your data across devices.</p>
+        <div class="msg err" id="loginErr" role="alert"></div>
+        <div class="field"><label for="loginEmail">Email</label><input type="email" id="loginEmail" required autocomplete="email"></div>
+        <div class="field"><label for="loginPassword">Password</label><input type="password" id="loginPassword" required autocomplete="current-password"></div>
+        <button type="submit" class="primary" id="loginBtn">Log in</button>
+      </form>
+
+      <form class="auth-form" id="signupForm" hidden autocomplete="on">
+        <h2>Create your account</h2>
+        <p class="sub">Takes about 15 seconds. Your data will sync across devices.</p>
+        <div class="msg err" id="signupErr" role="alert"></div>
+        <div class="field"><label for="signupName">Name</label><input type="text" id="signupName" required autocomplete="name" placeholder="Priyansh"></div>
+        <div class="field"><label for="signupEmail">Email</label><input type="email" id="signupEmail" required autocomplete="email" placeholder="you@example.com"></div>
+        <div class="field"><label for="signupPassword">Password</label><input type="password" id="signupPassword" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters"></div>
+        <button type="submit" class="primary" id="signupBtn">Create account</button>
+      </form>
+
+      <p class="auth-disclaimer">Passwords are hashed on the server with bcrypt. Session token expires after 30 days.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= APP ========================= -->
+<div id="appShell" class="app-shell" hidden>
+  <aside class="sidebar">
+    <div class="side-brand"><div class="brand-mark">🌿</div><div class="brand-name">Footprint</div></div>
+
+    <nav class="navlist" role="navigation">
+      <button class="navitem" data-view="dashboard" aria-current="true"><span class="ico">◆</span> Dashboard</button>
+      <button class="navitem" data-view="log"><span class="ico">＋</span> Log activity</button>
+      <button class="navitem" data-view="folders"><span class="ico">▤</span> Folders</button>
+      <button class="navitem" data-view="history"><span class="ico">≡</span> History</button>
+      <button class="navitem" data-view="goals"><span class="ico">◎</span> Goals</button>
+      <button class="navitem" data-view="insights"><span class="ico">↗</span> Insights</button>
+      <button class="navitem" data-view="profile"><span class="ico">☺</span> Profile</button>
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-user">
+        <div class="side-avatar" id="sideAvatar">?</div>
+        <div class="side-user-info">
+          <div class="side-user-name" id="sideUserName">—</div>
+          <div class="side-user-email" id="sideUserEmail">—</div>
+        </div>
+      </div>
+      <button class="ghost" id="logoutBtn" style="font-size:0.78rem;padding:0.4rem 0.7rem;">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section id="view-dashboard" class="view active">
+      <div class="view-head">
+        <div><h1 id="dashGreeting">Good day</h1><div class="hint" id="dashDate">—</div></div>
+      </div>
+      <div class="stat-grid" id="statGrid"></div>
+      <div class="grid-2">
+        <div class="panel">
+          <p class="panel-title">30-Day Trend <span class="src">kg CO₂e / day</span></p>
+          <canvas id="trendChart" height="160"></canvas>
+        </div>
+        <div class="panel">
+          <p class="panel-title">Today by Category</p>
+          <div id="todayBreakdown"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="panel-title">Recent Activity <span class="src" id="recentCount">—</span></p>
+        <div class="tbl-scroll">
+          <table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th style="text-align:right;">kg CO₂e</th></tr></thead>
+          <tbody id="recentBody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-log" class="view">
+      <div class="view-head"><div><h1>Log an activity</h1><div class="hint">Pick a category, quantity and date. We'll do the maths.</div></div></div>
+      <div class="panel">
+        <p class="panel-title">Category</p>
+        <div class="pill-row" id="catPills"></div>
+        <div class="field-row">
+          <div class="field"><label for="fActivity">Activity</label><select id="fActivity"></select></div>
+          <div class="field" style="flex:0 0 7rem;"><label for="fQty">Quantity</label><input type="number" id="fQty" min="0" step="0.1" value="1"></div>
+          <div class="field" style="flex:0 0 5rem;"><label>Unit</label><input type="text" id="fUnit" disabled></div>
+          <div class="field" style="flex:0 0 9.5rem;"><label for="fDate">Date</label><input type="date" id="fDate"></div>
+        </div>
+        <div class="presets" id="presetsRow"></div>
+        <p class="preview-line">≈ <b class="num" id="fPreview">0.0</b> kg CO₂e</p>
+        <button class="primary" id="addBtn" style="width:auto;padding:0.65rem 1.4rem;">Add to log</button>
+      </div>
+    </section>
+
+    <section id="view-folders" class="view">
+      <div class="view-head">
+        <div><h1>Folders</h1><div class="hint">Group related emissions into one case — e.g. a factory's coal, the electricity used to process it, and the transport that brought it in.</div></div>
+        <button type="button" class="primary" id="newFolderBtn" style="width:auto;padding:0.6rem 1.1rem;">+ New folder</button>
+      </div>
+      <div id="folderList"></div>
+    </section>
+
+    <section id="view-folder-detail" class="view">
+      <div class="view-head">
+        <div>
+          <button type="button" class="ghost" id="backToFoldersBtn" style="font-size:0.75rem;padding:0.3rem 0.7rem;margin-bottom:0.7rem;">← Back to folders</button>
+          <h1 id="folderTitle">Folder</h1>
+          <div class="hint" id="folderMeta">—</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button type="button" class="ghost" id="renameFolderBtn">Rename</button>
+          <button type="button" class="danger-btn" id="deleteFolderBtn">Delete folder</button>
+          <button type="button" class="primary" id="downloadPdfBtn" style="width:auto;padding:0.55rem 1.1rem;">📄 Download PDF</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Add emission to this folder</p>
+        <div class="pill-row" id="industrialTabs">
+          <button type="button" class="pill" data-itab="coal" aria-pressed="true" style="background:var(--goods);color:var(--accent-ink);border-color:transparent;">🪨 Coal combustion</button>
+          <button type="button" class="pill" data-itab="electricity" aria-pressed="false">⚡ Electricity</button>
+          <button type="button" class="pill" data-itab="transport" aria-pressed="false">🚚 Transport / freight</button>
+        </div>
+
+        <div class="ind-form active" data-form="coal">
+          <div class="field-row">
+            <div class="field"><label for="coalType">Coal type</label>
+              <select id="coalType"></select>
+            </div>
+            <div class="field" style="flex:0 0 8rem;"><label for="coalQty">Amount burned</label><input type="number" id="coalQty" min="0" step="1" value="500"></div>
+            <div class="field" style="flex:0 0 6rem;"><label for="coalUnit">Unit</label>
+              <select id="coalUnit"><option value="kg">kg</option><option value="tonne">tonne</option></select>
+            </div>
+            <div class="field" style="flex:0 0 9.5rem;"><label for="coalDate">Date</label><input type="date" id="coalDate"></div>
+          </div>
+          <p class="preview-line">≈ <b class="num" id="coalPreview">0</b> kg CO₂e <span id="coalNote" class="stat-note" style="display:inline;margin-left:0.6rem;"></span></p>
+          <button class="primary" id="coalAddBtn" style="width:auto;padding:0.6rem 1.2rem;">Add coal entry</button>
+        </div>
+
+        <div class="ind-form" data-form="electricity">
+          <div class="field-row">
+            <div class="field"><label for="elecSource">Grid / Source</label>
+              <select id="elecSource"></select>
+            </div>
+            <div class="field" style="flex:0 0 8rem;"><label for="elecQty">Amount</label><input type="number" id="elecQty" min="0" step="1" value="800"></div>
+            <div class="field" style="flex:0 0 5rem;"><label>Unit</label><input type="text" value="kWh" disabled></div>
+            <div class="field" style="flex:0 0 9.5rem;"><label for="elecDate">Date</label><input type="date" id="elecDate"></div>
+          </div>
+          <p class="preview-line">≈ <b class="num" id="elecPreview">0</b> kg CO₂e</p>
+          <button class="primary" id="elecAddBtn" style="width:auto;padding:0.6rem 1.2rem;">Add electricity entry</button>
+        </div>
+
+        <div class="ind-form" data-form="transport">
+          <div class="field-row">
+            <div class="field"><label for="transMode">Mode</label>
+              <select id="transMode"></select>
+            </div>
+            <div class="field" style="flex:0 0 8rem;"><label for="transDist">Distance (km)</label><input type="number" id="transDist" min="0" step="1" value="200"></div>
+            <div class="field" style="flex:0 0 8rem;"><label for="transWeight">Payload (tonnes)</label><input type="number" id="transWeight" min="0" step="0.1" value="5"></div>
+            <div class="field" style="flex:0 0 9.5rem;"><label for="transDate">Date</label><input type="date" id="transDate"></div>
+          </div>
+          <p class="preview-line">≈ <b class="num" id="transPreview">0</b> kg CO₂e <span class="stat-note" style="display:inline;margin-left:0.6rem;" id="transTkm">0 tonne-km</span></p>
+          <button class="primary" id="transAddBtn" style="width:auto;padding:0.6rem 1.2rem;">Add transport entry</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Entries in this folder <span class="src" id="folderEntryCount">0 entries</span></p>
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Date</th><th>Type</th><th>Details</th><th style="text-align:right;">kg CO₂e</th><th></th></tr></thead>
+            <tbody id="folderEntryBody"></tbody>
+          </table>
+        </div>
+        <div class="folder-total-row"><span>Total emissions in this folder</span><b class="num" id="folderTotal">0 kg CO₂e</b></div>
+      </div>
+    </section>
+
+    <section id="view-history" class="view">
+      <div class="view-head"><div><h1>History</h1><div class="hint" id="historyCount">—</div></div>
+        <div style="display:flex;gap:0.5rem;">
+          <select id="historyFilter"><option value="all">All categories</option></select>
+          <button class="ghost" id="exportBtn">Export CSV</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="tbl-scroll">
+          <table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th style="text-align:right;">CO₂e</th><th></th></tr></thead>
+          <tbody id="historyBody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-goals" class="view">
+      <div class="view-head"><div><h1>Goals</h1><div class="hint">Set a daily cap. Watch the streak grow.</div></div></div>
+      <div class="panel">
+        <p class="panel-title">Today's Progress</p>
+        <div class="goal-hero">
+          <div class="ring-wrap">
+            <svg width="192" height="192" viewBox="0 0 192 192">
+              <circle class="ring-track" cx="96" cy="96" r="82"></circle>
+              <circle id="ringFill" class="ring-fill" cx="96" cy="96" r="82" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"></circle>
+            </svg>
+            <div class="ring-center"><div class="num" id="ringLabel">0%</div><div class="lbl">of daily cap</div></div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem;color:var(--muted);letter-spacing:0.07em;text-transform:uppercase;font-weight:700;margin-bottom:0.4rem;">Today</div>
+            <div style="font-size:2rem;font-weight:800;line-height:1.1;" class="num" id="goalTodayVal">0 kg</div>
+            <div class="hint" id="goalCapNote" style="margin-top:0.4rem;">Daily cap: — kg</div>
+            <div style="margin-top:1.2rem;display:flex;gap:1.5rem;flex-wrap:wrap;">
+              <div><div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">Current streak</div><div style="font-size:1.3rem;font-weight:800;" class="num" id="streakVal">0 days</div></div>
+              <div><div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;">Best streak</div><div style="font-size:1.3rem;font-weight:800;" class="num" id="bestStreakVal">0 days</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="panel-title">Set Daily Cap</p>
+        <p class="panel-note">Global average is ~13 kg CO₂e/day. The 2030 climate target is ~6.3 kg/day.</p>
+        <div class="field-row">
+          <div class="field" style="flex:0 0 8rem;"><label for="capInput">kg CO₂e / day</label><input type="number" id="capInput" min="1" step="0.5"></div>
+          <div class="field" style="align-self:end;"><button class="primary" id="saveCapBtn" style="width:auto;padding:0.6rem 1.3rem;">Save cap</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-insights" class="view">
+      <div class="view-head"><div><h1>Insights</h1><div class="hint">Where your carbon is going, and how to shrink it.</div></div></div>
+      <div class="grid-2">
+        <div class="panel"><p class="panel-title">Last 30 Days by Category</p><div id="insightBreakdown"></div></div>
+        <div class="panel">
+          <p class="panel-title">Annualized vs Benchmarks</p>
+          <div class="gauge" id="gaugeTrack"></div>
+          <p class="gauge-caption">Projected from your recent average, extrapolated across a full year.</p>
+        </div>
+      </div>
+      <div class="panel"><p class="panel-title">Suggestions</p><div id="tipsList"></div></div>
+    </section>
+
+    <section id="view-profile" class="view">
+      <div class="view-head"><div><h1>Profile</h1><div class="hint">Manage your account and data.</div></div></div>
+      <div class="panel">
+        <p class="panel-title">Account</p>
+        <div class="field-row">
+          <div class="field"><label>Name</label><input type="text" id="profName"></div>
+          <div class="field"><label>Email</label><input type="email" id="profEmail" disabled></div>
+        </div>
+        <button class="ghost" id="saveProfileBtn">Save name</button>
+      </div>
+      <div class="panel">
+        <p class="panel-title">Your Data</p>
+        <p class="panel-note" id="profileStats">—</p>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="ghost" id="profileExportBtn">Export my data (CSV)</button>
+          <button class="danger-btn" id="clearDataBtn">Clear all my entries</button>
+          <button class="danger-btn" id="deleteAccountBtn">Delete account</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------------------- constants ----------------------
+  var TOKEN_KEY = "footprint-token";
+
+  var CATEGORIES = {
+    transport: { label: "Transport", color: "var(--transport)", items: {
+      car_petrol: { label: "Car (petrol)", factor: 0.192, unit: "km" },
+      car_diesel: { label: "Car (diesel)", factor: 0.171, unit: "km" },
+      car_ev:     { label: "Car (electric)", factor: 0.053, unit: "km" },
+      motorbike:  { label: "Motorbike", factor: 0.113, unit: "km" },
+      bus:        { label: "Bus", factor: 0.105, unit: "km" },
+      train:      { label: "Train", factor: 0.041, unit: "km" },
+      flight_short: { label: "Flight, short-haul", factor: 0.255, unit: "km" },
+      flight_long:  { label: "Flight, long-haul", factor: 0.150, unit: "km" }
+    }},
+    energy: { label: "Home Energy", color: "var(--energy)", items: {
+      electricity: { label: "Electricity", factor: 0.716, unit: "kWh" },
+      natgas:      { label: "Natural gas", factor: 0.203, unit: "kWh" },
+      lpg:         { label: "LPG", factor: 2.983, unit: "kg" }
+    }},
+    food: { label: "Food", color: "var(--food)", items: {
+      meal_meat:  { label: "Meal — meat-heavy", factor: 3.3, unit: "meal" },
+      meal_mixed: { label: "Meal — mixed", factor: 1.7, unit: "meal" },
+      meal_veg:   { label: "Meal — vegetarian", factor: 0.9, unit: "meal" },
+      meal_vegan: { label: "Meal — vegan", factor: 0.7, unit: "meal" },
+      dairy:      { label: "Dairy", factor: 1.2, unit: "L" }
+    }},
+    goods: { label: "Goods & Waste", color: "var(--goods)", items: {
+      parcel:   { label: "Online parcel", factor: 6.0, unit: "parcel" },
+      clothing: { label: "New clothing item", factor: 10.0, unit: "item" },
+      waste:    { label: "General waste", factor: 0.5, unit: "kg" }
+    }}
+  };
+
+  var PRESETS = [
+    { cat: "transport", act: "car_petrol", qty: 10, label: "Drove 10 km" },
+    { cat: "transport", act: "bus", qty: 8, label: "Bus 8 km" },
+    { cat: "energy", act: "electricity", qty: 5, label: "5 kWh electricity" },
+    { cat: "food", act: "meal_meat", qty: 1, label: "Meat meal" },
+    { cat: "food", act: "meal_veg", qty: 1, label: "Veg meal" },
+    { cat: "goods", act: "parcel", qty: 1, label: "Parcel" }
+  ];
+
+  // ---------------------- state ----------------------
+  var token = localStorage.getItem(TOKEN_KEY) || null;
+  var currentUser = null;
+  var entries = [];
+  var goal = { dailyCap: 10 };
+  var folders = [];
+  var activeFolderId = null;
+  var activeIndustrialTab = "coal";
+
+  // ---------------------- industrial factor tables ----------------------
+  var INDUSTRIAL = {
+    coal: {
+      bituminous:    { label: "Bituminous coal",     factor: 2.42, unit: "kg" },
+      anthracite:    { label: "Anthracite coal",     factor: 2.85, unit: "kg" },
+      subbituminous: { label: "Sub-bituminous coal", factor: 2.02, unit: "kg" },
+      lignite:       { label: "Lignite coal",        factor: 1.60, unit: "kg" }
+    },
+    electricity: {
+      india:        { label: "India grid (CEA)",     factor: 0.716, unit: "kWh" },
+      us:           { label: "US grid (EPA)",        factor: 0.386, unit: "kWh" },
+      eu:           { label: "EU grid (EEA avg)",    factor: 0.276, unit: "kWh" },
+      diesel_gen:   { label: "Diesel generator",     factor: 0.85,  unit: "kWh" },
+      coal_captive: { label: "Captive coal power",   factor: 0.95,  unit: "kWh" }
+    },
+    transport: {
+      truck_diesel: { label: "Truck (diesel)",       factor: 0.10,  unit: "tonne-km" },
+      rail_freight: { label: "Rail freight",         factor: 0.028, unit: "tonne-km" },
+      ship_bulk:    { label: "Ship (bulk carrier)",  factor: 0.006, unit: "tonne-km" },
+      barge:        { label: "Barge",                factor: 0.032, unit: "tonne-km" }
+    }
+  };
+
+  // ---------------------- helpers ----------------------
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  function daysAgo(n) { var d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+  function fmt(n, d) { d = d === undefined ? 1 : d; return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+  function toast(text, kind) {
+    var t = document.getElementById("toast");
+    t.textContent = text;
+    t.className = "toast show " + (kind || "");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.className = "toast"; }, 3200);
+  }
+
+  async function api(path, opts) {
+    opts = opts || {};
+    var headers = opts.headers || {};
+    headers["Content-Type"] = "application/json";
+    if (token) headers["Authorization"] = "Bearer " + token;
+    var body = opts.body ? JSON.stringify(opts.body) : undefined;
+    var res = await fetch(path, { method: opts.method || "GET", headers: headers, body: body });
+    var data = null;
+    try { data = await res.json(); } catch (e) { /* no body */ }
+    if (!res.ok) {
+      var err = new Error((data && data.error) || ("request failed (" + res.status + ")"));
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  // ---------------------- auth ----------------------
+  var authScreen = document.getElementById("authScreen");
+  var appShell = document.getElementById("appShell");
+  var bootScreen = document.getElementById("bootScreen");
+  var loginForm = document.getElementById("loginForm");
+  var signupForm = document.getElementById("signupForm");
+  var loginErr = document.getElementById("loginErr");
+  var signupErr = document.getElementById("signupErr");
+
+  function showMsg(el, text) {
+    el.textContent = text || "";
+    el.classList.toggle("show", !!text);
+  }
+  function clearMsgs() { showMsg(loginErr, ""); showMsg(signupErr, ""); }
+
+  document.querySelectorAll(".auth-tab").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      var mode = tab.dataset.mode;
+      document.querySelectorAll(".auth-tab").forEach(function (t) { t.setAttribute("aria-selected", t === tab ? "true" : "false"); });
+      loginForm.hidden = mode !== "login";
+      signupForm.hidden = mode !== "signup";
+      clearMsgs();
+    });
+  });
+
+  loginForm.addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    clearMsgs();
+    var btn = document.getElementById("loginBtn");
+    btn.disabled = true; btn.textContent = "Signing in…";
+    try {
+      var res = await api("/api/login", { method: "POST", body: {
+        email: document.getElementById("loginEmail").value,
+        password: document.getElementById("loginPassword").value
+      }});
+      token = res.token;
+      localStorage.setItem(TOKEN_KEY, token);
+      loginForm.reset();
+      await enterApp();
+    } catch (e) {
+      showMsg(loginErr, e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = "Log in";
+    }
+  });
+
+  signupForm.addEventListener("submit", async function (ev) {
+    ev.preventDefault();
+    clearMsgs();
+    var btn = document.getElementById("signupBtn");
+    btn.disabled = true; btn.textContent = "Creating account…";
+    try {
+      var res = await api("/api/signup", { method: "POST", body: {
+        name: document.getElementById("signupName").value,
+        email: document.getElementById("signupEmail").value,
+        password: document.getElementById("signupPassword").value
+      }});
+      token = res.token;
+      localStorage.setItem(TOKEN_KEY, token);
+      signupForm.reset();
+      await enterApp();
+    } catch (e) {
+      showMsg(signupErr, e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = "Create account";
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", function () {
+    token = null;
+    localStorage.removeItem(TOKEN_KEY);
+    currentUser = null; entries = []; goal = { dailyCap: 10 };
+    appShell.hidden = true;
+    authScreen.hidden = false;
+    document.querySelectorAll(".auth-tab").forEach(function (t, i) { t.setAttribute("aria-selected", i === 0 ? "true" : "false"); });
+    loginForm.hidden = false;
+    signupForm.hidden = true;
+  });
+
+  // ---------------------- enter app ----------------------
+  async function loadState() {
+    var res = await api("/api/me");
+    currentUser = res.user;
+    entries = res.entries || [];
+    goal = res.goal || { dailyCap: 10 };
+    folders = res.folders || [];
+  }
+
+  async function enterApp() {
+    try {
+      await loadState();
+    } catch (e) {
+      // Token invalid, force back to auth
+      token = null; localStorage.removeItem(TOKEN_KEY);
+      authScreen.hidden = false; appShell.hidden = true; bootScreen.hidden = true;
+      return;
+    }
+    authScreen.hidden = true;
+    appShell.hidden = false;
+    bootScreen.hidden = true;
+    initApp();
+  }
+
+  function initApp() {
+    document.getElementById("sideAvatar").textContent = (currentUser.name || "?").charAt(0).toUpperCase();
+    document.getElementById("sideUserName").textContent = currentUser.name;
+    document.getElementById("sideUserEmail").textContent = currentUser.email;
+    document.getElementById("profName").value = currentUser.name;
+    document.getElementById("profEmail").value = currentUser.email;
+    document.getElementById("capInput").value = goal.dailyCap;
+    document.getElementById("fDate").value = todayStr();
+    document.getElementById("coalDate").value = todayStr();
+    document.getElementById("elecDate").value = todayStr();
+    document.getElementById("transDate").value = todayStr();
+    populateHistoryFilter();
+    buildCategoryPills();
+    buildPresets();
+    populateActivities();
+    populateIndustrialSelects();
+    updateIndustrialPreviews();
+    renderAll();
+  }
+
+  // ---------------------- nav ----------------------
+  document.querySelectorAll(".navitem").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".navitem").forEach(function (b) { b.setAttribute("aria-current", "false"); });
+      btn.setAttribute("aria-current", "true");
+      document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+      document.getElementById("view-" + btn.dataset.view).classList.add("active");
+      window.scrollTo(0, 0);
+      if (btn.dataset.view === "insights") renderInsights();
+      if (btn.dataset.view === "goals") renderGoals();
+      if (btn.dataset.view === "folders") { activeFolderId = null; renderFolderList(); }
+    });
+  });
+
+  // ---------------------- log form ----------------------
+  var activeCat = "transport";
+  var fActivity = document.getElementById("fActivity");
+  var fQty = document.getElementById("fQty");
+  var fUnit = document.getElementById("fUnit");
+  var fDate = document.getElementById("fDate");
+  var fPreview = document.getElementById("fPreview");
+
+  function buildCategoryPills() {
+    var wrap = document.getElementById("catPills");
+    wrap.innerHTML = "";
+    Object.keys(CATEGORIES).forEach(function (k) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "pill"; btn.textContent = CATEGORIES[k].label;
+      btn.dataset.cat = k;
+      btn.setAttribute("aria-pressed", k === activeCat ? "true" : "false");
+      if (k === activeCat) btn.style.background = CATEGORIES[k].color;
+      btn.addEventListener("click", function () {
+        activeCat = k;
+        Object.keys(CATEGORIES).forEach(function (k2) {
+          var p = wrap.querySelector('[data-cat="' + k2 + '"]');
+          p.setAttribute("aria-pressed", k2 === activeCat ? "true" : "false");
+          p.style.background = k2 === activeCat ? CATEGORIES[k2].color : "";
+        });
+        populateActivities();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function buildPresets() {
+    var wrap = document.getElementById("presetsRow");
+    wrap.innerHTML = "";
+    PRESETS.forEach(function (p) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "preset";
+      btn.textContent = "+ " + p.label;
+      btn.addEventListener("click", function () {
+        activeCat = p.cat;
+        Object.keys(CATEGORIES).forEach(function (k2) {
+          var pill = document.querySelector('#catPills [data-cat="' + k2 + '"]');
+          pill.setAttribute("aria-pressed", k2 === activeCat ? "true" : "false");
+          pill.style.background = k2 === activeCat ? CATEGORIES[k2].color : "";
+        });
+        populateActivities();
+        fActivity.value = p.act;
+        applyActivity();
+        fQty.value = p.qty;
+        updatePreview();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function currentCat() { return CATEGORIES[activeCat]; }
+  function currentItem() { return currentCat().items[fActivity.value]; }
+
+  function populateActivities() {
+    fActivity.innerHTML = "";
+    var cat = currentCat();
+    Object.keys(cat.items).forEach(function (k) {
+      var opt = document.createElement("option");
+      opt.value = k; opt.textContent = cat.items[k].label;
+      fActivity.appendChild(opt);
+    });
+    applyActivity();
+  }
+  function applyActivity() { fUnit.value = currentItem().unit; updatePreview(); }
+  function updatePreview() {
+    var qty = parseFloat(fQty.value) || 0;
+    fPreview.textContent = fmt(currentItem().factor * qty, 2);
+  }
+
+  fActivity.addEventListener("change", applyActivity);
+  fQty.addEventListener("input", updatePreview);
+
+  document.getElementById("addBtn").addEventListener("click", async function () {
+    var qty = parseFloat(fQty.value);
+    if (!qty || qty <= 0) { fQty.focus(); return; }
+    var item = currentItem();
+    var btn = this;
+    btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      var res = await api("/api/entries", { method: "POST", body: {
+        date: fDate.value || todayStr(),
+        category: activeCat,
+        activity: fActivity.value,
+        label: item.label,
+        qty: qty,
+        unit: item.unit,
+        co2: item.factor * qty
+      }});
+      entries.push(res.entry);
+      fQty.value = 1;
+      updatePreview();
+      renderAll();
+      toast("Entry added", "ok");
+      document.querySelector('.navitem[data-view="dashboard"]').click();
+    } catch (e) {
+      toast("Failed to save: " + e.message, "err");
+    } finally {
+      btn.disabled = false; btn.textContent = "Add to log";
+    }
+  });
+
+  // ---------------------- aggregation ----------------------
+  // All entries (folder + personal) flow into dashboard and history.
+  function personalEntries() { return entries; }
+  function sumForDate(d) { return entries.filter(function (e) { return e.date === d; }).reduce(function (s, e) { return s + e.co2; }, 0); }
+  function sumRange(n) { var cutoff = daysAgo(n - 1); return entries.filter(function (e) { return e.date >= cutoff; }).reduce(function (s, e) { return s + e.co2; }, 0); }
+  function activeDaySpan() {
+    if (!entries.length) return 1;
+    var min = entries.map(function (e) { return e.date; }).reduce(function (a, b) { return a < b ? a : b; });
+    var span = Math.round((new Date(todayStr()) - new Date(min)) / 86400000) + 1;
+    return Math.max(1, Math.min(30, span));
+  }
+  function folderName(id) {
+    if (!id) return null;
+    var f = folders.find(function (x) { return x.id === id; });
+    return f ? f.name : null;
+  }
+
+  // ---------------------- dashboard ----------------------
+  function renderDashboard() {
+    var name = (currentUser.name || "friend").split(" ")[0];
+    var h = new Date().getHours();
+    var greet = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+    document.getElementById("dashGreeting").textContent = greet + ", " + name;
+    document.getElementById("dashDate").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+    var today = sumForDate(todayStr());
+    var yesterday = sumForDate(daysAgo(1));
+    var last7 = sumRange(7);
+    var last30 = sumRange(30);
+    var personal = personalEntries();
+    var dailyAvg = personal.length ? last30 / Math.min(30, activeDaySpan()) : 0;
+    var annualT = dailyAvg * 365 / 1000;
+
+    var delta = today - yesterday;
+    var deltaTxt = "", deltaClass = "";
+    if (personal.length) {
+      deltaClass = delta > 0.1 ? "up" : delta < -0.1 ? "down" : "";
+      var sign = delta > 0 ? "+" : "";
+      deltaTxt = sign + fmt(delta, 1) + " kg vs yesterday";
+    } else {
+      deltaTxt = "no entries yet";
+    }
+
+    var cards = [
+      { label: "Today", value: fmt(today, 1), unit: "kg", note: deltaTxt, klass: deltaClass },
+      { label: "7-Day Total", value: fmt(last7, 1), unit: "kg", note: fmt(last7 / 7, 1) + " kg/day avg" },
+      { label: "30-Day Total", value: fmt(last30, 1), unit: "kg", note: personal.length + " personal entries" },
+      { label: "Annualized", value: fmt(annualT, 2), unit: "t CO₂e", note: "projected at current rate" }
+    ];
+    var grid = document.getElementById("statGrid");
+    grid.innerHTML = "";
+    cards.forEach(function (c) {
+      var el = document.createElement("div");
+      el.className = "stat-card";
+      el.innerHTML = '<div class="stat-label">' + c.label + '</div>' +
+                     '<div class="stat-value num">' + c.value + ' <small>' + c.unit + '</small></div>' +
+                     '<div class="stat-note ' + (c.klass || "") + '">' + c.note + '</div>';
+      grid.appendChild(el);
+    });
+
+    renderTrendChart();
+    renderTodayBreakdown();
+    renderRecent();
+  }
+
+  function renderTrendChart() {
+    var canvas = document.getElementById("trendChart");
+    var ctx = canvas.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = canvas.clientWidth || 400, cssH = 160;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    var days = [];
+    for (var i = 29; i >= 0; i--) days.push(daysAgo(i));
+    var values = days.map(sumForDate);
+    var maxVal = Math.max.apply(null, values.concat([1]));
+
+    var padL = 8, padR = 8, padT = 12, padB = 20;
+    var w = cssW - padL - padR, h = cssH - padT - padB;
+
+    ctx.strokeStyle = "rgba(237,232,219,0.06)"; ctx.lineWidth = 1;
+    for (var g = 0; g <= 3; g++) {
+      var gy = padT + (h / 3) * g;
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + w, gy); ctx.stroke();
+    }
+
+    var stepX = w / (values.length - 1);
+    function xAt(i) { return padL + stepX * i; }
+    function yAt(v) { return padT + h - (v / maxVal) * h; }
+
+    ctx.beginPath();
+    ctx.moveTo(xAt(0), padT + h);
+    values.forEach(function (v, i) { ctx.lineTo(xAt(i), yAt(v)); });
+    ctx.lineTo(xAt(values.length - 1), padT + h);
+    ctx.closePath();
+    var grad = ctx.createLinearGradient(0, padT, 0, padT + h);
+    grad.addColorStop(0, "rgba(122,198,120,0.32)");
+    grad.addColorStop(1, "rgba(122,198,120,0)");
+    ctx.fillStyle = grad; ctx.fill();
+
+    ctx.beginPath();
+    values.forEach(function (v, i) { var x = xAt(i), y = yAt(v); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+    ctx.strokeStyle = "#7ac678"; ctx.lineWidth = 2; ctx.stroke();
+
+    var lastX = xAt(values.length - 1), lastY = yAt(values[values.length - 1]);
+    ctx.beginPath(); ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2); ctx.fillStyle = "#7ac678"; ctx.fill();
+
+    ctx.fillStyle = "#8a938c"; ctx.font = "10px -apple-system, sans-serif";
+    ctx.textAlign = "left"; ctx.fillText(days[0].slice(5), padL, cssH - 4);
+    ctx.textAlign = "right"; ctx.fillText("today", padL + w, cssH - 4);
+  }
+
+  function renderTodayBreakdown() {
+    var todayList = personalEntries().filter(function (e) { return e.date === todayStr(); });
+    var totals = {}; Object.keys(CATEGORIES).forEach(function (k) { totals[k] = 0; });
+    var grand = 0;
+    todayList.forEach(function (e) { if (totals[e.category] !== undefined) { totals[e.category] += e.co2; grand += e.co2; } });
+    var wrap = document.getElementById("todayBreakdown");
+    wrap.innerHTML = "";
+    if (!grand) { wrap.innerHTML = '<div class="empty-note">Nothing logged today yet.</div>'; return; }
+    Object.keys(CATEGORIES).forEach(function (k) {
+      var v = totals[k], pct = (v / grand) * 100;
+      var row = document.createElement("div");
+      row.className = "bd-row";
+      row.innerHTML = '<span>' + CATEGORIES[k].label + '</span>' +
+                      '<span class="bd-track"><span class="bd-fill" style="width:' + pct.toFixed(1) + '%; background:' + CATEGORIES[k].color + ';"></span></span>' +
+                      '<span class="bd-value num">' + fmt(v, 1) + ' kg</span>';
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderRecent() {
+    var body = document.getElementById("recentBody");
+    body.innerHTML = "";
+    var personal = personalEntries();
+    var list = personal.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).slice(0, 8);
+    document.getElementById("recentCount").textContent = personal.length + " total";
+    if (!list.length) { body.innerHTML = '<tr><td colspan="4" class="empty-note">No activity yet — head to "Log activity" to add your first entry.</td></tr>'; return; }
+    list.forEach(function (e) {
+      var c = CATEGORIES[e.category] || { color: "var(--muted)", label: e.category.charAt(0).toUpperCase() + e.category.slice(1) };
+      var fName = folderName(e.folderId);
+      var folderChip = fName ? ' <span class="cat-chip" style="background:var(--surface-2);color:var(--muted);">▤ ' + escapeHtml(fName) + '</span>' : '';
+      var tr = document.createElement("tr");
+      tr.innerHTML = '<td class="num">' + e.date + '</td>' +
+                     '<td>' + escapeHtml(e.label) + ' <span class="cat-chip" style="background:' + c.color + '22;color:' + c.color + ';">' + c.label + '</span>' + folderChip + '</td>' +
+                     '<td class="num">' + fmt(e.qty, e.qty < 10 ? 1 : 0) + ' ' + e.unit + '</td>' +
+                     '<td class="num" style="text-align:right;">' + fmt(e.co2, 1) + '</td>';
+      body.appendChild(tr);
+    });
+  }
+
+  // ---------------------- history ----------------------
+  function populateHistoryFilter() {
+    var sel = document.getElementById("historyFilter");
+    var cur = sel.value || "all";
+    sel.innerHTML = '<option value="all">All categories</option>';
+    Object.keys(CATEGORIES).forEach(function (k) {
+      var opt = document.createElement("option");
+      opt.value = k; opt.textContent = CATEGORIES[k].label;
+      sel.appendChild(opt);
+    });
+    // Add industrial categories present in entries
+    var extra = {};
+    entries.forEach(function (e) {
+      if (!CATEGORIES[e.category] && !extra[e.category]) extra[e.category] = true;
+    });
+    Object.keys(extra).forEach(function (k) {
+      var opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = k.charAt(0).toUpperCase() + k.slice(1) + " (industrial)";
+      sel.appendChild(opt);
+    });
+    sel.value = cur;
+    // Bind once
+    if (!sel._bound) { sel.addEventListener("change", renderHistory); sel._bound = true; }
+  }
+  function renderHistory() {
+    var filter = document.getElementById("historyFilter").value;
+    var list = personalEntries().slice();
+    if (filter !== "all") list = list.filter(function (e) { return e.category === filter; });
+    list.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    document.getElementById("historyCount").textContent = list.length + (list.length === 1 ? " entry" : " entries");
+    var body = document.getElementById("historyBody");
+    body.innerHTML = "";
+    if (!list.length) { body.innerHTML = '<tr><td colspan="5" class="empty-note">No entries match.</td></tr>'; return; }
+    list.forEach(function (e) {
+      var c = CATEGORIES[e.category] || { color: "var(--muted)", label: e.category.charAt(0).toUpperCase() + e.category.slice(1) };
+      var fName = folderName(e.folderId);
+      var folderChip = fName ? ' <span class="cat-chip" style="background:var(--surface-2);color:var(--muted);">▤ ' + escapeHtml(fName) + '</span>' : '';
+      var tr = document.createElement("tr");
+      tr.innerHTML = '<td class="num">' + e.date + '</td>' +
+                     '<td>' + escapeHtml(e.label) + ' <span class="cat-chip" style="background:' + c.color + '22;color:' + c.color + ';">' + c.label + '</span>' + folderChip + '</td>' +
+                     '<td class="num">' + fmt(e.qty, e.qty < 10 ? 1 : 0) + ' ' + e.unit + '</td>' +
+                     '<td class="num" style="text-align:right;">' + fmt(e.co2, 1) + '</td>' +
+                     '<td><button class="del-btn" data-id="' + e.id + '" title="Delete">✕</button></td>';
+      body.appendChild(tr);
+    });
+    body.querySelectorAll(".del-btn").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var id = btn.dataset.id;
+        try {
+          await api("/api/entries/" + encodeURIComponent(id), { method: "DELETE" });
+          entries = entries.filter(function (e) { return e.id !== id; });
+          renderAll();
+          toast("Deleted", "ok");
+        } catch (e) { toast("Delete failed: " + e.message, "err"); }
+      });
+    });
+  }
+
+  function downloadCsv() {
+    if (!entries.length) { toast("Nothing to export yet", "err"); return; }
+    var rows = [["date", "category", "activity", "quantity", "unit", "kg_co2e"]];
+    entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).forEach(function (e) {
+      rows.push([e.date, (CATEGORIES[e.category] && CATEGORIES[e.category].label) || e.category, e.label, e.qty, e.unit, Number(e.co2).toFixed(3)]);
+    });
+    var csv = rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(","); }).join("\n");
+    var blob = new Blob([csv], { type: "text/csv" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "footprint-" + currentUser.email.split("@")[0] + ".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  document.getElementById("exportBtn").addEventListener("click", downloadCsv);
+  document.getElementById("profileExportBtn").addEventListener("click", downloadCsv);
+
+  // ---------------------- goals ----------------------
+  function computeStreaks() {
+    var cap = goal.dailyCap;
+    var personal = personalEntries();
+    if (!personal.length) return { current: 0, best: 0 };
+    var byDate = {};
+    personal.forEach(function (e) { byDate[e.date] = (byDate[e.date] || 0) + e.co2; });
+    var dates = Object.keys(byDate).sort();
+    var firstDate = new Date(dates[0]);
+    var today = new Date(todayStr());
+    var best = 0, streak = 0;
+    for (var d = new Date(firstDate); d <= today; d.setDate(d.getDate() + 1)) {
+      var key = d.toISOString().slice(0, 10);
+      var v = byDate[key] || 0;
+      if (v <= cap) { streak++; if (streak > best) best = streak; }
+      else { streak = 0; }
+    }
+    return { current: streak, best: best };
+  }
+
+  function renderGoals() {
+    var today = sumForDate(todayStr());
+    var cap = goal.dailyCap;
+    var pct = cap > 0 ? Math.min(100, (today / cap) * 100) : 0;
+    var color = pct <= 80 ? "var(--good)" : pct <= 100 ? "var(--warn)" : "var(--danger)";
+    var ring = document.getElementById("ringFill");
+    ring.style.stroke = color;
+    ring.style.strokeDashoffset = 100 - pct;
+    document.getElementById("ringLabel").textContent = pct.toFixed(0) + "%";
+    document.getElementById("goalTodayVal").textContent = fmt(today, 1) + " kg";
+    document.getElementById("goalCapNote").textContent = "Daily cap: " + fmt(cap, 1) + " kg CO₂e";
+    var s = computeStreaks();
+    document.getElementById("streakVal").textContent = s.current + (s.current === 1 ? " day" : " days");
+    document.getElementById("bestStreakVal").textContent = s.best + (s.best === 1 ? " day" : " days");
+  }
+
+  document.getElementById("saveCapBtn").addEventListener("click", async function () {
+    var v = parseFloat(document.getElementById("capInput").value);
+    if (!v || v <= 0) return;
+    var btn = this; btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      var res = await api("/api/goal", { method: "PUT", body: { dailyCap: v } });
+      goal = res.goal;
+      renderGoals();
+      toast("Daily cap updated", "ok");
+    } catch (e) {
+      toast("Failed to save: " + e.message, "err");
+    } finally {
+      btn.disabled = false; btn.textContent = "Save cap";
+    }
+  });
+
+  // ---------------------- insights ----------------------
+  function renderInsights() {
+    var cutoff = daysAgo(29);
+    var totals = {}; Object.keys(CATEGORIES).forEach(function (k) { totals[k] = 0; });
+    var grand = 0;
+    personalEntries().filter(function (e) { return e.date >= cutoff; }).forEach(function (e) {
+      if (totals[e.category] !== undefined) { totals[e.category] += e.co2; grand += e.co2; }
+    });
+    var wrap = document.getElementById("insightBreakdown");
+    wrap.innerHTML = "";
+    if (!grand) { wrap.innerHTML = '<div class="empty-note">No entries in the last 30 days.</div>'; }
+    else {
+      Object.keys(CATEGORIES).forEach(function (k) {
+        var v = totals[k]; var pct = (v / grand) * 100;
+        var row = document.createElement("div");
+        row.className = "bd-row";
+        row.innerHTML = '<span>' + CATEGORIES[k].label + '</span>' +
+                        '<span class="bd-track"><span class="bd-fill" style="width:' + pct.toFixed(1) + '%; background:' + CATEGORIES[k].color + ';"></span></span>' +
+                        '<span class="bd-value num">' + fmt(v, 1) + ' kg</span>';
+        wrap.appendChild(row);
+      });
+    }
+
+    var last30 = sumRange(30);
+    var dailyAvg = personalEntries().length ? last30 / Math.min(30, activeDaySpan()) : 0;
+    var annualT = dailyAvg * 365 / 1000;
+    var track = document.getElementById("gaugeTrack");
+    track.innerHTML = "";
+    var scaleMax = 20;
+    [{ v: 2.3, label: "2030 target" }, { v: 4.7, label: "Global avg" }, { v: 11, label: "High-income avg" }].forEach(function (m) {
+      var mk = document.createElement("div"); mk.className = "gauge-mk";
+      mk.style.left = Math.min(100, (m.v / scaleMax) * 100) + "%";
+      var lbl = document.createElement("span"); lbl.className = "gauge-mk-lbl"; lbl.textContent = m.label;
+      mk.appendChild(lbl);
+      track.appendChild(mk);
+    });
+    var you = document.createElement("div"); you.className = "gauge-you";
+    you.style.left = Math.min(100, Math.max(0, (annualT / scaleMax) * 100)) + "%";
+    var youLbl = document.createElement("span"); youLbl.className = "gauge-you-lbl"; youLbl.textContent = "You: " + fmt(annualT, 1) + "t";
+    you.appendChild(youLbl);
+    track.appendChild(you);
+
+    var tips = [];
+    if (!grand) {
+      tips.push({ icon: "→", h: "Start logging", p: "Add a couple of entries first — even just this morning's commute — so the insights have something to work with." });
+    } else {
+      var biggest = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; })[0];
+      if (biggest === "transport") tips.push({ icon: "🚉", h: "Transport is your biggest share", p: "One car trip replaced by rail cuts emissions by ~78%. Even carpooling halves them." });
+      else if (biggest === "energy") tips.push({ icon: "⚡", h: "Home energy leads your footprint", p: "Switching to a green tariff or adding rooftop solar is the single biggest lever most households have." });
+      else if (biggest === "food") tips.push({ icon: "🥗", h: "Food is your top category", p: "Swapping one meat meal per day for a mixed or veg one usually saves 1–2 kg CO₂e — every day." });
+      else if (biggest === "goods") tips.push({ icon: "📦", h: "Purchased goods lead your footprint", p: "Consolidating deliveries and buying fewer new items reduces the biggest chunk of your Scope 3." });
+
+      if (annualT > 11) tips.push({ icon: "▲", h: "Above the high-income average", p: "Your projected annual footprint is over ~11 t CO₂e. Any one of the swaps above would meaningfully bring it down." });
+      else if (annualT > 4.7) tips.push({ icon: "◐", h: "Between global and high-income averages", p: "You're tracking above the global mean but below the high-income mean — good ground to build on." });
+      else if (annualT > 0) tips.push({ icon: "✓", h: "Below the global average", p: "Nice — your rate is running under 4.7 t/year. The 2030 target is ~2.3 t, so the next lever is your biggest category." });
+    }
+
+    var tl = document.getElementById("tipsList");
+    tl.innerHTML = "";
+    tips.forEach(function (t) {
+      var el = document.createElement("div");
+      el.className = "insight";
+      el.innerHTML = '<div class="insight-icon">' + t.icon + '</div>' +
+                     '<div><h4>' + t.h + '</h4><p>' + t.p + '</p></div>';
+      tl.appendChild(el);
+    });
+  }
+
+  // ---------------------- profile ----------------------
+  document.getElementById("saveProfileBtn").addEventListener("click", async function () {
+    var newName = document.getElementById("profName").value.trim();
+    if (!newName) return;
+    var btn = this; btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      var res = await api("/api/me", { method: "PATCH", body: { name: newName } });
+      currentUser = res.user;
+      document.getElementById("sideUserName").textContent = currentUser.name;
+      document.getElementById("sideAvatar").textContent = currentUser.name.charAt(0).toUpperCase();
+      renderDashboard();
+      toast("Profile updated", "ok");
+    } catch (e) {
+      toast("Save failed: " + e.message, "err");
+    } finally {
+      btn.disabled = false; btn.textContent = "Save name";
+    }
+  });
+
+  document.getElementById("clearDataBtn").addEventListener("click", async function () {
+    if (!confirm("Clear all your logged entries? Your account will stay, but your history will be erased.")) return;
+    try {
+      await api("/api/entries", { method: "DELETE" });
+      entries = [];
+      renderAll();
+      toast("All entries cleared", "ok");
+    } catch (e) { toast("Failed: " + e.message, "err"); }
+  });
+
+  document.getElementById("deleteAccountBtn").addEventListener("click", async function () {
+    if (!confirm("Delete your account and all your data? This cannot be undone.")) return;
+    try {
+      await api("/api/me", { method: "DELETE" });
+      document.getElementById("logoutBtn").click();
+      toast("Account deleted", "ok");
+    } catch (e) { toast("Failed: " + e.message, "err"); }
+  });
+
+  function renderProfileStats() {
+    var el = document.getElementById("profileStats");
+    var since = currentUser && currentUser.createdAt
+      ? new Date(currentUser.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+      : "—";
+    el.textContent = entries.length + " entries logged since you signed up on " + since + ".";
+  }
+
+  // ---------------------- folders ----------------------
+  function openFolderView(id) {
+    activeFolderId = id;
+    document.querySelectorAll(".navitem").forEach(function (b) { b.setAttribute("aria-current", "false"); });
+    var folderNav = document.querySelector('.navitem[data-view="folders"]');
+    if (folderNav) folderNav.setAttribute("aria-current", "true");
+    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+    document.getElementById("view-folder-detail").classList.add("active");
+    renderFolderDetail();
+    window.scrollTo(0, 0);
+  }
+
+  function goBackToFolders() {
+    activeFolderId = null;
+    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+    document.getElementById("view-folders").classList.add("active");
+    renderFolderList();
+    window.scrollTo(0, 0);
+  }
+
+  function folderEntries(folderId) {
+    return entries.filter(function (e) { return e.folderId === folderId; });
+  }
+  function folderTotal(folderId) {
+    return folderEntries(folderId).reduce(function (s, e) { return s + e.co2; }, 0);
+  }
+
+  function renderFolderList() {
+    var wrap = document.getElementById("folderList");
+    wrap.innerHTML = "";
+    if (!folders.length) {
+      wrap.innerHTML = '<div class="empty-folders">You haven\'t created any folders yet. Click <b>+ New folder</b> to group emissions for one industrial process, project, or scenario.</div>';
+      return;
+    }
+    var grid = document.createElement("div");
+    grid.className = "folder-grid";
+    folders.slice().sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; }).forEach(function (f) {
+      var count = folderEntries(f.id).length;
+      var total = folderTotal(f.id);
+      var card = document.createElement("div");
+      card.className = "folder-card";
+      card.innerHTML =
+        '<div class="folder-card-head"><div class="folder-icon">▤</div><div class="folder-name">' + escapeHtml(f.name) + '</div></div>' +
+        '<div class="folder-total num">' + fmt(total, 1) + ' <small style="color:var(--muted);font-size:0.75rem;font-weight:500;">kg CO₂e</small></div>' +
+        '<div class="folder-meta">' + count + (count === 1 ? " entry" : " entries") + ' · created ' + new Date(f.createdAt).toLocaleDateString() + '</div>' +
+        '<div class="folder-actions">' +
+          '<button class="ghost" data-act="open">Open</button>' +
+          '<button class="ghost" data-act="pdf">PDF</button>' +
+          '<button class="danger-btn" data-act="del" title="Delete">✕</button>' +
+        '</div>';
+      card.querySelector('[data-act="open"]').addEventListener("click", function (ev) { ev.stopPropagation(); openFolderView(f.id); });
+      card.querySelector('[data-act="pdf"]').addEventListener("click", function (ev) { ev.stopPropagation(); downloadFolderPdf(f); });
+      card.querySelector('[data-act="del"]').addEventListener("click", function (ev) { ev.stopPropagation(); deleteFolder(f); });
+      card.addEventListener("click", function () { openFolderView(f.id); });
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+  }
+
+  function renderFolderDetail() {
+    var folder = folders.find(function (f) { return f.id === activeFolderId; });
+    if (!folder) { goBackToFolders(); return; }
+    document.getElementById("folderTitle").textContent = folder.name;
+    var list = folderEntries(folder.id);
+    document.getElementById("folderMeta").textContent = list.length + (list.length === 1 ? " entry" : " entries") + " · created " + new Date(folder.createdAt).toLocaleDateString();
+    document.getElementById("folderEntryCount").textContent = list.length + (list.length === 1 ? " entry" : " entries");
+    document.getElementById("folderTotal").textContent = fmt(folderTotal(folder.id), 2) + " kg CO₂e";
+
+    var body = document.getElementById("folderEntryBody");
+    body.innerHTML = "";
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="5" class="empty-note">No entries yet — add coal, electricity or transport above.</td></tr>';
+    } else {
+      list.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (e) {
+        var chipColor = e.category === "coal" ? "var(--goods)" : e.category === "electricity" ? "var(--energy)" : "var(--transport)";
+        var chipLabel = e.category === "coal" ? "Coal" : e.category === "electricity" ? "Electricity" : "Transport";
+        var details = e.qty + " " + e.unit;
+        if (e.meta && e.meta.weight && e.meta.distance) {
+          details = e.meta.distance + " km × " + e.meta.weight + " t = " + fmt(e.qty, 1) + " tonne-km";
+        }
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          '<td class="num">' + e.date + '</td>' +
+          '<td><span class="cat-chip" style="background:' + chipColor + '22;color:' + chipColor + ';">' + chipLabel + '</span></td>' +
+          '<td>' + escapeHtml(e.label) + ' <div class="stat-note" style="margin-top:0.15rem;">' + details + '</div></td>' +
+          '<td class="num" style="text-align:right;font-weight:600;">' + fmt(e.co2, 2) + '</td>' +
+          '<td><button class="del-btn" data-id="' + e.id + '">✕</button></td>';
+        body.appendChild(tr);
+      });
+      body.querySelectorAll(".del-btn").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          try {
+            await api("/api/entries/" + encodeURIComponent(btn.dataset.id), { method: "DELETE" });
+            entries = entries.filter(function (e) { return e.id !== btn.dataset.id; });
+            renderFolderDetail();
+            renderFolderList();
+            renderDashboard();
+            renderHistory();
+            toast("Deleted", "ok");
+          } catch (e) { toast("Delete failed: " + e.message, "err"); }
+        });
+      });
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s || "").replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // --- create/rename/delete folder ---
+  document.getElementById("newFolderBtn").addEventListener("click", async function (ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    var defaultName = "Folder " + (folders.length + 1);
+    var name = prompt("Name this folder:", defaultName);
+    if (!name) return;
+    try {
+      var res = await api("/api/folders", { method: "POST", body: { name: name } });
+      folders.push(res.folder);
+      renderFolderList();
+      toast("Folder created — click it to add entries", "ok");
+    } catch (e) { toast("Failed: " + e.message, "err"); }
+  });
+
+  document.getElementById("renameFolderBtn").addEventListener("click", async function () {
+    var folder = folders.find(function (f) { return f.id === activeFolderId; });
+    if (!folder) return;
+    var newName = prompt("Rename folder:", folder.name);
+    if (!newName || newName === folder.name) return;
+    try {
+      var res = await api("/api/folders/" + encodeURIComponent(folder.id), { method: "PATCH", body: { name: newName } });
+      Object.assign(folder, res.folder);
+      renderFolderDetail();
+      toast("Renamed", "ok");
+    } catch (e) { toast("Failed: " + e.message, "err"); }
+  });
+
+  document.getElementById("deleteFolderBtn").addEventListener("click", function () {
+    var folder = folders.find(function (f) { return f.id === activeFolderId; });
+    if (folder) deleteFolder(folder);
+  });
+
+  async function deleteFolder(folder) {
+    if (!confirm('Delete folder "' + folder.name + '" and all ' + folderEntries(folder.id).length + ' entries inside it? This cannot be undone.')) return;
+    try {
+      await api("/api/folders/" + encodeURIComponent(folder.id), { method: "DELETE" });
+      folders = folders.filter(function (f) { return f.id !== folder.id; });
+      entries = entries.filter(function (e) { return e.folderId !== folder.id; });
+      if (activeFolderId === folder.id) goBackToFolders();
+      else renderFolderList();
+      populateHistoryFilter();
+      renderDashboard();
+      renderHistory();
+      toast("Folder deleted", "ok");
+    } catch (e) { toast("Failed: " + e.message, "err"); }
+  }
+
+  document.getElementById("backToFoldersBtn").addEventListener("click", goBackToFolders);
+
+  // --- industrial tabs ---
+  document.querySelectorAll("#industrialTabs .pill").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      activeIndustrialTab = btn.dataset.itab;
+      var tabColor = activeIndustrialTab === "coal" ? "var(--goods)" : activeIndustrialTab === "electricity" ? "var(--energy)" : "var(--transport)";
+      document.querySelectorAll("#industrialTabs .pill").forEach(function (b) {
+        b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+        b.style.background = b === btn ? tabColor : "";
+        b.style.color = b === btn ? "var(--accent-ink)" : "";
+        b.style.borderColor = b === btn ? "transparent" : "";
+      });
+      document.querySelectorAll(".ind-form").forEach(function (f) {
+        f.classList.toggle("active", f.dataset.form === activeIndustrialTab);
+      });
+    });
+  });
+
+  // --- populate industrial dropdowns ---
+  function populateIndustrialSelects() {
+    var coalSel = document.getElementById("coalType");
+    coalSel.innerHTML = "";
+    Object.keys(INDUSTRIAL.coal).forEach(function (k) {
+      var item = INDUSTRIAL.coal[k];
+      var opt = document.createElement("option");
+      opt.value = k; opt.textContent = item.label + " (" + item.factor + " kg CO₂e/kg)";
+      coalSel.appendChild(opt);
+    });
+    var elecSel = document.getElementById("elecSource");
+    elecSel.innerHTML = "";
+    Object.keys(INDUSTRIAL.electricity).forEach(function (k) {
+      var item = INDUSTRIAL.electricity[k];
+      var opt = document.createElement("option");
+      opt.value = k; opt.textContent = item.label + " (" + item.factor + " kg CO₂e/kWh)";
+      elecSel.appendChild(opt);
+    });
+    var transSel = document.getElementById("transMode");
+    transSel.innerHTML = "";
+    Object.keys(INDUSTRIAL.transport).forEach(function (k) {
+      var item = INDUSTRIAL.transport[k];
+      var opt = document.createElement("option");
+      opt.value = k; opt.textContent = item.label + " (" + item.factor + " kg/tonne-km)";
+      transSel.appendChild(opt);
+    });
+  }
+
+  // --- preview calculations ---
+  function coalCo2() {
+    var qty = parseFloat(document.getElementById("coalQty").value) || 0;
+    var unit = document.getElementById("coalUnit").value;
+    var factor = INDUSTRIAL.coal[document.getElementById("coalType").value].factor;
+    var kg = unit === "tonne" ? qty * 1000 : qty;
+    return { co2: kg * factor, kg: kg, factor: factor };
+  }
+  function elecCo2() {
+    var qty = parseFloat(document.getElementById("elecQty").value) || 0;
+    var factor = INDUSTRIAL.electricity[document.getElementById("elecSource").value].factor;
+    return { co2: qty * factor, factor: factor };
+  }
+  function transCo2() {
+    var dist = parseFloat(document.getElementById("transDist").value) || 0;
+    var wt = parseFloat(document.getElementById("transWeight").value) || 0;
+    var factor = INDUSTRIAL.transport[document.getElementById("transMode").value].factor;
+    var tkm = dist * wt;
+    return { co2: tkm * factor, tkm: tkm, factor: factor };
+  }
+
+  function updateIndustrialPreviews() {
+    var c = coalCo2();
+    document.getElementById("coalPreview").textContent = fmt(c.co2, 1);
+    document.getElementById("coalNote").textContent = "(" + fmt(c.kg, 0) + " kg × " + c.factor + ")";
+    var e = elecCo2();
+    document.getElementById("elecPreview").textContent = fmt(e.co2, 1);
+    var t = transCo2();
+    document.getElementById("transPreview").textContent = fmt(t.co2, 1);
+    document.getElementById("transTkm").textContent = "(" + fmt(t.tkm, 0) + " tonne-km × " + t.factor + ")";
+  }
+
+  ["coalType","coalQty","coalUnit","elecSource","elecQty","transMode","transDist","transWeight"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", updateIndustrialPreviews);
+    document.getElementById(id).addEventListener("change", updateIndustrialPreviews);
+  });
+
+  // --- add industrial entries ---
+  async function addIndustrialEntry(payload, buttonId) {
+    if (!activeFolderId) { toast("No folder selected", "err"); return; }
+    payload.folderId = activeFolderId;
+    var btn = document.getElementById(buttonId);
+    btn.disabled = true; var oldTxt = btn.textContent; btn.textContent = "Saving…";
+    try {
+      var res = await api("/api/entries", { method: "POST", body: payload });
+      entries.push(res.entry);
+      renderFolderDetail();
+      // keep dashboard + history in sync so folder entries appear there too
+      populateHistoryFilter();
+      renderDashboard();
+      renderHistory();
+      toast("Added — also appears in Dashboard and History", "ok");
+    } catch (e) { toast("Failed: " + e.message, "err"); }
+    finally { btn.disabled = false; btn.textContent = oldTxt; }
+  }
+
+  document.getElementById("coalAddBtn").addEventListener("click", function () {
+    var qty = parseFloat(document.getElementById("coalQty").value);
+    if (!qty || qty <= 0) return;
+    var unit = document.getElementById("coalUnit").value;
+    var type = document.getElementById("coalType").value;
+    var item = INDUSTRIAL.coal[type];
+    var c = coalCo2();
+    addIndustrialEntry({
+      date: document.getElementById("coalDate").value || todayStr(),
+      category: "coal", activity: type, label: item.label,
+      qty: qty, unit: unit, co2: c.co2,
+      meta: { kg: c.kg, factor: item.factor }
+    }, "coalAddBtn");
+  });
+
+  document.getElementById("elecAddBtn").addEventListener("click", function () {
+    var qty = parseFloat(document.getElementById("elecQty").value);
+    if (!qty || qty <= 0) return;
+    var src = document.getElementById("elecSource").value;
+    var item = INDUSTRIAL.electricity[src];
+    var e = elecCo2();
+    addIndustrialEntry({
+      date: document.getElementById("elecDate").value || todayStr(),
+      category: "electricity", activity: src, label: "Electricity — " + item.label,
+      qty: qty, unit: "kWh", co2: e.co2,
+      meta: { factor: item.factor }
+    }, "elecAddBtn");
+  });
+
+  document.getElementById("transAddBtn").addEventListener("click", function () {
+    var dist = parseFloat(document.getElementById("transDist").value);
+    var wt = parseFloat(document.getElementById("transWeight").value);
+    if (!dist || !wt || dist <= 0 || wt <= 0) return;
+    var mode = document.getElementById("transMode").value;
+    var item = INDUSTRIAL.transport[mode];
+    var t = transCo2();
+    addIndustrialEntry({
+      date: document.getElementById("transDate").value || todayStr(),
+      category: "transport", activity: mode, label: "Transport — " + item.label,
+      qty: t.tkm, unit: "tonne-km", co2: t.co2,
+      meta: { distance: dist, weight: wt, factor: item.factor }
+    }, "transAddBtn");
+  });
+
+  // --- PDF export ---
+  document.getElementById("downloadPdfBtn").addEventListener("click", function () {
+    var folder = folders.find(function (f) { return f.id === activeFolderId; });
+    if (folder) downloadFolderPdf(folder);
+  });
+
+  function downloadFolderPdf(folder) {
+    var list = folderEntries(folder.id).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    var total = folderTotal(folder.id);
+    var byCat = { coal: 0, electricity: 0, transport: 0 };
+    list.forEach(function (e) { if (byCat[e.category] !== undefined) byCat[e.category] += e.co2; });
+
+    var rowsHtml = list.length
+      ? list.map(function (e) {
+          var chipColor = e.category === "coal" ? "#b98acb" : e.category === "electricity" ? "#e8b04b" : "#7fb5e6";
+          var chipLabel = e.category.charAt(0).toUpperCase() + e.category.slice(1);
+          var details = e.qty + " " + e.unit;
+          if (e.meta && e.meta.distance && e.meta.weight) {
+            details = e.meta.distance + " km × " + e.meta.weight + " t = " + fmt(e.qty, 1) + " tonne-km";
+          } else if (e.meta && e.meta.kg && e.unit === "tonne") {
+            details = e.qty + " tonne (" + fmt(e.meta.kg, 0) + " kg)";
+          }
+          return '<tr>' +
+            '<td>' + e.date + '</td>' +
+            '<td><span class="chip" style="background:' + chipColor + '22;color:' + chipColor + ';">' + chipLabel + '</span></td>' +
+            '<td>' + escapeHtml(e.label) + '<div class="det">' + details + '</div></td>' +
+            '<td class="right">' + fmt(e.co2, 2) + '</td>' +
+          '</tr>';
+        }).join("")
+      : '<tr><td colspan="4" style="text-align:center;color:#888;padding:2rem;">No entries in this folder yet.</td></tr>';
+
+    var breakdownHtml = Object.keys(byCat).map(function (k) {
+      var pct = total > 0 ? (byCat[k] / total) * 100 : 0;
+      var chipColor = k === "coal" ? "#b98acb" : k === "electricity" ? "#e8b04b" : "#7fb5e6";
+      return '<div class="bd">' +
+        '<span class="bd-lbl">' + k.charAt(0).toUpperCase() + k.slice(1) + '</span>' +
+        '<span class="bd-track"><span class="bd-fill" style="width:' + pct.toFixed(1) + '%;background:' + chipColor + ';"></span></span>' +
+        '<span class="bd-val">' + fmt(byCat[k], 1) + ' kg (' + pct.toFixed(0) + '%)</span>' +
+      '</div>';
+    }).join("");
+
+    var html = '<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(folder.name) + ' — Emissions Report</title>' +
+      '<style>' +
+      '@page { margin: 1.4cm; }' +
+      'body { font-family: Georgia, "Iowan Old Style", serif; color:#1a1a1a; line-height:1.55; max-width: 720px; margin: 0 auto; padding: 1.5rem; }' +
+      'h1 { font-size: 1.8rem; margin: 0 0 0.3rem; letter-spacing: -0.01em; }' +
+      '.meta { color:#666; font-size: 0.85rem; margin-bottom: 1.5rem; }' +
+      'h2 { font-size: 1.05rem; margin: 1.6rem 0 0.6rem; font-weight: 600; color:#333; letter-spacing: 0.02em; text-transform: uppercase; font-family: -apple-system, Helvetica, sans-serif; border-bottom: 1px solid #ddd; padding-bottom: 0.3rem; }' +
+      '.total-box { background:#f5f2e8; border-left: 4px solid #7ac678; padding: 1rem 1.2rem; margin: 1rem 0 1.5rem; }' +
+      '.total-box .lbl { font-size: 0.8rem; color:#666; text-transform: uppercase; letter-spacing: 0.05em; }' +
+      '.total-box .val { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }' +
+      '.bd { display: grid; grid-template-columns: 7rem 1fr 8rem; gap: 0.7rem; align-items: center; margin-bottom: 0.4rem; font-size: 0.9rem; }' +
+      '.bd-track { height: 8px; background:#eee; border-radius: 999px; overflow: hidden; }' +
+      '.bd-fill { height: 100%; }' +
+      '.bd-val { text-align: right; color:#666; font-family: monospace; }' +
+      'table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.6rem; }' +
+      'th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color:#666; letter-spacing: 0.05em; padding: 0.5rem 0.5rem; border-bottom: 2px solid #333; font-family: -apple-system, Helvetica, sans-serif; }' +
+      'td { padding: 0.55rem 0.5rem; border-bottom: 1px solid #eee; vertical-align: top; }' +
+      '.right { text-align: right; font-family: monospace; font-weight: 600; }' +
+      '.chip { font-size: 0.72rem; padding: 0.15rem 0.55rem; border-radius: 999px; font-weight: 700; font-family: -apple-system, Helvetica, sans-serif; }' +
+      '.det { font-size: 0.72rem; color:#888; margin-top: 0.2rem; }' +
+      '.foot { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.72rem; color:#888; }' +
+      '@media print { .no-print { display: none !important; } }' +
+      '.no-print { position: fixed; top: 1rem; right: 1rem; background:#7ac678; color:#0a1a09; padding: 0.6rem 1.1rem; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.9rem; font-family: -apple-system, Helvetica, sans-serif; }' +
+      '</style></head><body>' +
+      '<button class="no-print" onclick="window.print()">Print / Save as PDF</button>' +
+      '<h1>' + escapeHtml(folder.name) + '</h1>' +
+      '<div class="meta">Emissions report · Prepared for ' + escapeHtml(currentUser.name) + ' · Generated ' + new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) + '</div>' +
+      '<div class="total-box"><div class="lbl">Total emissions</div><div class="val">' + fmt(total, 2) + ' kg CO₂e</div><div style="font-size:0.85rem;color:#666;margin-top:0.3rem;">= ' + fmt(total / 1000, 3) + ' tonnes CO₂e · from ' + list.length + (list.length === 1 ? " entry" : " entries") + '</div></div>' +
+      '<h2>Breakdown by source</h2>' + (list.length ? breakdownHtml : '<div style="color:#888;font-size:0.85rem;">No entries.</div>') +
+      '<h2>All entries</h2>' +
+      '<table><thead><tr><th>Date</th><th>Type</th><th>Details</th><th style="text-align:right;">kg CO₂e</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+      '<div class="foot">Emission factors sourced from DEFRA, CEA India, IPCC, and EEA — indicative planning estimates. This report is generated for the Footprint app and is not a certified regulatory disclosure.</div>' +
+      '<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},400);});<\/script>' +
+      '</body></html>';
+
+    var w = window.open("", "_blank", "width=900,height=1100");
+    if (!w) { toast("Pop-up blocked — allow pop-ups to download PDF", "err"); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  // ---------------------- render all ----------------------
+  function renderAll() {
+    renderDashboard();
+    renderHistory();
+    renderGoals();
+    renderProfileStats();
+  }
+
+  window.addEventListener("resize", function () { if (!appShell.hidden) renderTrendChart(); });
+
+  // ---------------------- boot ----------------------
+  (async function boot() {
+    if (token) {
+      try { await enterApp(); return; }
+      catch (e) { token = null; localStorage.removeItem(TOKEN_KEY); }
+    }
+    bootScreen.hidden = true;
+    authScreen.hidden = false;
+  })();
+})();
+</script>
+</body>
+</html>

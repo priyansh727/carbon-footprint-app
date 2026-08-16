@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Carbon Footprint — Research & Module Plan</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+<style>
+  :root {
+    --bg-1: #0d1218;
+    --glass: rgba(255,255,255,0.045);
+    --glass-strong: rgba(255,255,255,0.075);
+    --glass-border: rgba(255,255,255,0.09);
+    --ink: #edf1f6;
+    --muted: #8992a6;
+    --muted-2: #5d6478;
+    --accent: #35d0a6;
+    --accent-ink: #06251c;
+    --scope1: #35d0a6;
+    --scope2: #6c8cff;
+    --scope3: #f2a93c;
+    --line: rgba(255,255,255,0.09);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1000px 650px at 90% -8%, rgba(108,140,255,0.16), transparent 55%),
+      radial-gradient(800px 550px at -8% 12%, rgba(53,208,166,0.13), transparent 55%),
+      radial-gradient(700px 500px at 50% 100%, rgba(242,169,60,0.06), transparent 60%),
+      var(--bg-1);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  .num { font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace; font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif; font-weight: 400; text-wrap: balance; }
+  a { color: var(--accent); }
+
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 5rem 0 3.5rem; border-bottom: 1px solid var(--line); }
+  .hero-eyebrow { font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.1rem; }
+  .hero h1 { font-size: clamp(2.3rem, 5.4vw, 3.6rem); margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+  .hero-sub { font-size: 1.05rem; color: var(--muted); max-width: 60ch; margin: 0 0 2rem; }
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 2.2rem; font-size: 0.84rem; }
+  .hero-meta div span { display: block; }
+  .hero-meta .m-label { color: var(--muted-2); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.25rem; }
+
+  /* ---------- Sticky nav ---------- */
+  .subnav {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(9,12,17,0.82);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .subnav-inner { max-width: 980px; margin: 0 auto; padding: 0 1.5rem; display: flex; gap: 0.3rem; overflow-x: auto; }
+  .subnav a {
+    color: var(--muted); text-decoration: none; font-size: 0.8rem; padding: 0.85rem 0.7rem;
+    white-space: nowrap; border-bottom: 2px solid transparent;
+  }
+  .subnav a:hover { color: var(--ink); }
+
+  section.chapter { padding: 3.4rem 0; border-bottom: 1px solid var(--line); }
+  section.chapter:last-of-type { border-bottom: none; }
+  .chapter-label { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--scope1); margin-bottom: 0.6rem; }
+  .chapter h2 { font-size: clamp(1.6rem, 3.4vw, 2.1rem); margin: 0 0 1.4rem; }
+  .lede { color: var(--muted); max-width: 68ch; margin-bottom: 1.6rem; font-size: 0.98rem; }
+
+  /* ---------- Glass card ---------- */
+  .card {
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 14px;
+    padding: 1.3rem 1.5rem; backdrop-filter: blur(14px);
+  }
+  .card + .card { margin-top: 1rem; }
+
+  /* ---------- Key findings ---------- */
+  .findings { display: grid; gap: 0.85rem; margin-bottom: 1.6rem; }
+  .finding { display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.8rem; align-items: start; }
+  .finding .mk { width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--glass-strong); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: var(--scope1); margin-top: 0.1rem; }
+  .finding p { margin: 0; color: var(--ink); font-size: 0.94rem; }
+
+  .rec-box {
+    border: 1px solid rgba(53,208,166,0.3); background: rgba(53,208,166,0.06);
+    border-radius: 14px; padding: 1.3rem 1.5rem;
+  }
+  .rec-box .chapter-label { color: var(--scope1); margin-bottom: 0.5rem; }
+  .phase-mini { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+  .phase-mini span {
+    font-size: 0.74rem; padding: 0.35rem 0.7rem; border-radius: 999px;
+    background: var(--glass-strong); border: 1px solid var(--glass-border); color: var(--muted);
+  }
+
+  /* ---------- Tables ---------- */
+  .tbl-scroll { overflow-x: auto; border-radius: 12px; border: 1px solid var(--glass-border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.87rem; min-width: 560px; }
+  thead th {
+    text-align: left; background: var(--glass-strong); font-size: 0.68rem; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 0.7rem 0.9rem;
+  }
+  tbody td { padding: 0.75rem 0.9rem; border-top: 1px solid var(--line); vertical-align: top; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .scope-pill { font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 999px; display: inline-block; }
+
+  /* ---------- Formula ---------- */
+  .formula {
+    text-align: center; font-size: 1.3rem; padding: 1.6rem; margin: 1.4rem 0;
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 14px;
+  }
+  .formula .num { color: var(--scope1); }
+  .example-list { display: grid; gap: 0.55rem; margin-top: 1rem; }
+  .example-list div { font-size: 0.86rem; color: var(--muted); display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); padding-bottom: 0.5rem; }
+  .example-list b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Two column ---------- */
+  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  @media (max-width: 720px) { .cols-2 { grid-template-columns: 1fr; } }
+  .cols-2 h3 { font-size: 1.02rem; margin: 0 0 0.7rem; color: var(--ink); font-family: inherit; }
+  .cols-2 ul { margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: 0.88rem; display: grid; gap: 0.5rem; }
+  .cols-2 ul b { color: var(--ink); }
+
+  /* ---------- Module grid ---------- */
+  .module-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
+  @media (max-width: 720px) { .module-grid { grid-template-columns: 1fr; } }
+  .module-card { display: flex; gap: 0.9rem; }
+  .module-num { font-family: ui-monospace, monospace; font-size: 0.78rem; color: var(--muted-2); flex: none; padding-top: 0.15rem; }
+  .module-card h4 { margin: 0 0 0.35rem; font-size: 0.96rem; font-weight: 700; font-family: inherit; }
+  .module-card p { margin: 0; font-size: 0.83rem; color: var(--muted); }
+
+  /* ---------- AI features ---------- */
+  .ai-row { display: grid; grid-template-columns: 1.6rem 1fr 8rem; gap: 0.9rem; align-items: center; padding: 0.8rem 0; border-top: 1px solid var(--line); }
+  .ai-row:first-child { border-top: none; }
+  .ai-rank { font-family: ui-monospace, monospace; color: var(--scope2); font-size: 0.85rem; }
+  .ai-row h4 { margin: 0 0 0.2rem; font-size: 0.92rem; font-family: inherit; }
+  .ai-row p { margin: 0; font-size: 0.82rem; color: var(--muted); }
+  .value-track { height: 6px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
+  .value-fill { height: 100%; background: linear-gradient(90deg, var(--scope2), var(--scope1)); border-radius: 999px; }
+  .value-label { font-size: 0.68rem; color: var(--muted-2); margin-top: 0.3rem; text-align: right; }
+
+  /* ---------- Roadmap ---------- */
+  .roadmap { display: grid; gap: 1rem; }
+  .phase-card { display: grid; grid-template-columns: 9rem 1fr; gap: 1.2rem; }
+  @media (max-width: 640px) { .phase-card { grid-template-columns: 1fr; } }
+  .phase-tag { font-size: 0.76rem; color: var(--muted); }
+  .phase-tag b { display: block; color: var(--ink); font-size: 1rem; margin-bottom: 0.2rem; }
+  .phase-card ul { margin: 0.5rem 0 0; padding-left: 1.1rem; font-size: 0.86rem; color: var(--muted); display: grid; gap: 0.4rem; }
+  .phase-rail { position: relative; padding-left: 1.1rem; border-left: 2px solid var(--glass-border); }
+  .phase-rail::before {
+    content: ""; position: absolute; left: -6px; top: 0.4rem; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--scope1);
+  }
+
+  /* ---------- Checklist ---------- */
+  .checklist { display: grid; gap: 0.7rem; }
+  .check-item { display: grid; grid-template-columns: 1.3rem 1fr; gap: 0.7rem; font-size: 0.9rem; }
+  .check-item .box { width: 1.1rem; height: 1.1rem; border: 1px solid var(--glass-border); border-radius: 4px; margin-top: 0.15rem; }
+
+  /* ---------- Bottom line ---------- */
+  .bottom-line {
+    font-family: Georgia, serif; font-size: 1.3rem; line-height: 1.55; max-width: 68ch;
+    border-left: 3px solid var(--scope1); padding-left: 1.3rem; margin: 0 auto;
+  }
+
+  .refs { font-size: 0.8rem; color: var(--muted); display: grid; gap: 0.5rem; }
+
+  /* ---------- Footer CTA ---------- */
+  .footer-cta {
+    padding: 3.5rem 0 4.5rem; text-align: center;
+  }
+  .footer-cta h2 { margin-bottom: 0.6rem; }
+  .footer-cta p { color: var(--muted); margin-bottom: 1.6rem; }
+  .cta-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem; background: var(--accent); color: var(--accent-ink);
+    text-decoration: none; font-weight: 700; padding: 0.85rem 1.6rem; border-radius: 10px; font-size: 0.94rem;
+  }
+  .cta-btn:hover { filter: brightness(1.08); }
+  .foot-note { font-size: 0.76rem; color: var(--muted-2); margin-top: 3rem; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+
+<nav class="subnav">
+  <div class="subnav-inner">
+    <a href="#summary">Summary</a>
+    <a href="#foundations">Foundations</a>
+    <a href="#audit">Current Module</a>
+    <a href="#proposal">Proposed App</a>
+    <a href="#ai">AI Layer</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="#next">Next Steps</a>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-eyebrow">Internal Research Report · Management Review</div>
+    <h1>Carbon Footprint — A Standalone Application</h1>
+    <p class="hero-sub">Research and module plan for a dedicated carbon-accounting product, built alongside the SystemETA ERP rather than embedded inside it.</p>
+    <div class="hero-meta">
+      <div><span class="m-label">Prepared for</span><span>Management Review — SystemETA Platform</span></div>
+      <div><span class="m-label">Prepared by</span><span>Priyansh, Intern — VSQC</span></div>
+      <div><span class="m-label">Date</span><span>July 2026</span></div>
+    </div>
+  </header>
+
+  <section class="chapter" id="summary">
+    <div class="chapter-label">Executive Summary</div>
+    <h2>Carbon accounting is now a regulated, growing enterprise need</h2>
+    <p class="lede">This report responds to a directive to research the carbon-footprinting domain and propose a plan for a dedicated Carbon Footprint application — separate from the SystemETA ERP — replacing the small module currently embedded in the platform.</p>
+
+    <div class="findings">
+      <div class="finding"><span class="mk">1</span><p>Carbon accounting is standardised globally through the <b>GHG Protocol</b>, which classifies emissions into <b>Scope 1, 2, and 3</b> — the accepted foundation for any serious enterprise product.</p></div>
+      <div class="finding"><span class="mk">2</span><p>The core calculation is simple — <b>Activity Data × Emission Factor = Emissions</b> — but the operational complexity lies in emission-factor libraries, boundary-setting, and Scope 3 supply-chain data.</p></div>
+      <div class="finding"><span class="mk">3</span><p><b>SEBI's BRSR / BRSR Core</b> already mandates GHG disclosure for the top 1,000 listed Indian companies, with Scope 3 phasing in from FY 2025-26. Demand is real and growing.</p></div>
+      <div class="finding"><span class="mk">4</span><p>Market leaders (SAP SFM, Persefoni, Climatiq, Plan A) show the winning wedge is now <b>AI</b> — automated factor mapping, OCR ingestion, anomaly detection, and scenario modelling.</p></div>
+      <div class="finding"><span class="mk">5</span><p>A <b>standalone architecture</b> is justified: it scales independently, sells beyond ERP customers, and keeps pace with evolving disclosure standards.</p></div>
+    </div>
+
+    <div class="rec-box">
+      <div class="chapter-label">Recommendation</div>
+      <p style="margin:0; font-size: 0.95rem;">Build in three phases — each shipping something demonstrable before the next begins.</p>
+      <div class="phase-mini">
+        <span>Phase 1 — MVP, Scope 1 &amp; 2 · 4–6 wks</span>
+        <span>Phase 2 — Scope 3 &amp; reporting · 6–8 wks</span>
+        <span>Phase 3 — AI layer · 8–10 wks</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="foundations">
+    <div class="chapter-label">1 · Understanding Carbon Footprint</div>
+    <h2>The Scope 1 / 2 / 3 backbone</h2>
+    <p class="lede">A carbon footprint is the total greenhouse gases released — directly or indirectly — by an activity, product, organisation, or individual, expressed in kg CO₂e. The GHG Protocol splits an organisation's emissions into three scopes; every serious carbon product is built around this classification.</p>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Scope</th><th>Covers</th><th>Typical sources</th></tr></thead>
+        <tbody>
+          <tr><td><span class="scope-pill" style="background:rgba(53,208,166,0.15); color:var(--scope1);">Scope 1 — Direct</span></td><td>Emissions from sources owned or directly controlled by the company.</td><td>Company vehicles, on-site fuel combustion, furnaces, refrigerant leaks, backup generators.</td></tr>
+          <tr><td><span class="scope-pill" style="background:rgba(108,140,255,0.15); color:var(--scope2);">Scope 2 — Energy</span></td><td>Emissions from purchased electricity, heat, or steam.</td><td>Grid electricity for offices, servers, plants; purchased district heating/cooling.</td></tr>
+          <tr><td><span class="scope-pill" style="background:rgba(242,169,60,0.15); color:var(--scope3);">Scope 3 — Value chain</span></td><td>All other indirect emissions, upstream and downstream. Voluntary today, becoming mandatory.</td><td>Purchased goods, business travel, employee commute, distribution, use of sold products, waste.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lede" style="margin-top: 1rem;"><b style="color:var(--ink);">Why Scope 3 matters:</b> for most companies it accounts for roughly <b style="color:var(--ink);">90% of total emissions</b> — and it's the hardest to measure, since it requires data from suppliers, employees, and downstream users.</p>
+
+    <h3 style="font-family: inherit; font-size: 1.15rem; margin: 2rem 0 0.6rem;">The universal calculation</h3>
+    <div class="formula">Emissions (<span class="num">kg CO₂e</span>) = Activity Data × Emission Factor</div>
+    <div class="example-list">
+      <div>Diesel burnt in a generator <b class="num">100 L × 2.68 kg CO₂e/L = 268 kg CO₂e</b></div>
+      <div>Electricity, Indian grid <b class="num">10,000 kWh × 0.716 (CEA) = 7,160 kg CO₂e</b></div>
+      <div>Domestic flight, economy <b class="num">1,200 km × 0.156 kg CO₂e/pkm = 187 kg CO₂e</b></div>
+    </div>
+
+    <div class="cols-2" style="margin-top: 2.2rem;">
+      <div class="card">
+        <h3>Emission factor databases</h3>
+        <ul>
+          <li><b>DEFRA</b> (UK) — widely used, free, published annually.</li>
+          <li><b>US EPA / EIA</b> — detailed North American factors.</li>
+          <li><b>IPCC</b> — scientific baseline for national inventories.</li>
+          <li><b>CEA</b> (India) — official grid emission factors.</li>
+          <li><b>Ecoinvent, GLEC, EXIOBASE, Climatiq</b> — commercial life-cycle databases.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Regulatory landscape</h3>
+        <ul>
+          <li><b>SEBI BRSR</b> — mandatory since FY 2022-23 for the top 1,000 listed companies.</li>
+          <li><b>BRSR Core</b> — phased third-party assurance, top 150 → top 1,000 by FY 2026-27.</li>
+          <li><b>Scope 3</b> — top 250 companies, comply-or-explain from FY 2025-26.</li>
+          <li><b>CCTS</b> — compliance carbon market live for obligated entities from FY26.</li>
+          <li><b>EU CSRD / CBAM</b> — relevant for Indian exporters to Europe.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="audit">
+    <div class="chapter-label">2 · Current Module in SystemETA</div>
+    <h2>Why the embedded module doesn't scale</h2>
+    <p class="lede">SystemETA currently includes a small carbon-footprinting module embedded in the ERP. Based on observation, it supports manual entry for a small number of sources against a flat, largely hard-coded factor table, with a basic total-CO₂e dashboard — no scope classification, no regulator-recognised export, no Scope 3, no supplier data. <i>To be confirmed with the module's current owner.</i></p>
+
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Limitation</th><th>Why it blocks growth</th></tr></thead>
+        <tbody>
+          <tr><td>Scope not modelled</td><td>Cannot satisfy BRSR or any global disclosure framework — all are scope-based.</td></tr>
+          <tr><td>No emission-factor library</td><td>Every calculation is only as accurate as one static table; no versioning, no region fallbacks.</td></tr>
+          <tr><td>Coupled to ERP customers only</td><td>Can't be sold to companies on a different ERP — or none — cutting off most of the market.</td></tr>
+          <tr><td>No Scope 3 or supplier onboarding</td><td>Value-chain emissions (~90% of total) stay invisible.</td></tr>
+          <tr><td>No AI/automation</td><td>Every entry is manual; no OCR, anomaly detection, or forecasting.</td></tr>
+          <tr><td>No regulator-ready reports</td><td>BRSR / GHG Protocol / CDP exports aren't generated.</td></tr>
+          <tr><td>No audit trail or evidence store</td><td>Fails assurance requirements now applied to BRSR Core filings.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-family: inherit; font-size: 1.1rem; margin: 1.8rem 0 0.8rem;">What to carry forward</h3>
+    <div class="phase-mini">
+      <span>Existing customer emission data — migratable schema</span>
+      <span>SystemETA design language — dark glassmorphic UI</span>
+      <span>Existing auth — single sign-on for ERP users</span>
+    </div>
+  </section>
+
+  <section class="chapter" id="proposal">
+    <div class="chapter-label">3 · Proposed Standalone Application</div>
+    <h2>Eight core modules</h2>
+    <p class="lede">A separate application scales independently, sells to non-ERP customers, ships on its own cadence as regulation evolves, and keeps a purpose-built audit trail for assurance.</p>
+
+    <div class="module-grid">
+      <div class="card module-card"><span class="module-num">01</span><div><h4>Organisation &amp; Boundary Setup</h4><p>Reporting entity, facilities, business units, reporting period, base year, consolidation approach.</p></div></div>
+      <div class="card module-card"><span class="module-num">02</span><div><h4>Data Collection &amp; Ingestion</h4><p>Manual forms, CSV/Excel upload, ERP connector, utility-bill OCR, IoT/meter feeds, supplier questionnaires.</p></div></div>
+      <div class="card module-card"><span class="module-num">03</span><div><h4>Emission Factors Library</h4><p>Versioned, searchable factors from DEFRA, EPA, IPCC, CEA India, plus internal factors with region/year fallback.</p></div></div>
+      <div class="card module-card"><span class="module-num">04</span><div><h4>Calculation Engine</h4><p>Applies the correct factor per activity, handles unit conversions, tracks assumptions for audit.</p></div></div>
+      <div class="card module-card"><span class="module-num">05</span><div><h4>Dashboards &amp; Analytics</h4><p>Real-time footprint by scope, category, site, product; trend, hotspot, and intensity analysis.</p></div></div>
+      <div class="card module-card"><span class="module-num">06</span><div><h4>Reporting &amp; Compliance</h4><p>One-click exports for BRSR, BRSR Core, GHG Protocol, CDP, GRI, CSRD, with evidence pack attached.</p></div></div>
+      <div class="card module-card"><span class="module-num">07</span><div><h4>Reduction Planning &amp; Targets</h4><p>Absolute/intensity/SBTi targets, reduction scenarios, initiative tracking, net-zero forecasting.</p></div></div>
+      <div class="card module-card"><span class="module-num">08</span><div><h4>User, Roles &amp; Audit Log</h4><p>Role-based access, full change history, approval workflows for period close.</p></div></div>
+    </div>
+
+    <h3 style="font-family: inherit; font-size: 1.15rem; margin: 2.2rem 0 0.8rem;">Calculations the engine must support</h3>
+    <div class="card">
+      <div class="example-list" style="margin-top:0;">
+        <div>Scope 1 — stationary &amp; mobile combustion <b>Fuel × EF</b> (diesel, petrol, LPG, CNG, natural gas, coal)</div>
+        <div>Scope 1 — refrigerant leakage <b>kg lost × GWP</b> (e.g. R-410A = 2,088)</div>
+        <div>Scope 2 — purchased electricity <b>location-based &amp; market-based</b>, side by side per GHG Protocol guidance</div>
+        <div>Scope 3 — value chain (15 categories) <b>3 launch categories</b>: purchased goods, business travel, employee commute</div>
+        <div>Product Carbon Footprint <b>ISO 14067</b>, later phase</div>
+      </div>
+    </div>
+
+    <h3 style="font-family: inherit; font-size: 1.15rem; margin: 2.2rem 0 0.8rem;">Suggested tech stack</h3>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Layer</th><th>Recommendation</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td>Frontend</td><td>Next.js + Tailwind, dark glassmorphic</td><td>Matches SystemETA, reuses team skills.</td></tr>
+          <tr><td>Backend</td><td>NestJS or FastAPI</td><td>Python for ML; NestJS for ERP consistency.</td></tr>
+          <tr><td>Database</td><td>PostgreSQL + Timescale</td><td>Structured activity data and streaming meter feeds.</td></tr>
+          <tr><td>AI/ML</td><td>LLM APIs + scikit-learn/Prophet + embeddings</td><td>Fastest path to demonstrable AI features.</td></tr>
+          <tr><td>OCR</td><td>Azure Document Intelligence / PaddleOCR</td><td>Battle-tested on invoices and bills.</td></tr>
+          <tr><td>Integrations</td><td>REST + Webhooks, SystemETA connector first</td><td>Standard, easy for customers to consume.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="chapter" id="ai">
+    <div class="chapter-label">3.4 · AI &amp; ML Features</div>
+    <h2>Where modern carbon platforms differentiate</h2>
+    <p class="lede">Six capabilities, ranked by value delivered per unit of effort.</p>
+
+    <div class="card">
+      <div class="ai-row"><span class="ai-rank">01</span><div><h4>Emission-Factor Mapping Assistant</h4><p>Given "airfreight Mumbai → Frankfurt, 200 kg," suggests the top three matching factors with confidence scores.</p><div class="value-track"><div class="value-fill" style="width:96%;"></div></div><div class="value-label">Cuts data-entry time ~70% — the biggest single win</div></div></div>
+      <div class="ai-row"><span class="ai-rank">02</span><div><h4>OCR + LLM Invoice Ingestion</h4><p>Upload utility bills, fuel receipts, freight invoices; the model extracts date, quantity, unit, supplier.</p><div class="value-track"><div class="value-fill" style="width:85%;"></div></div><div class="value-label">Removes manual typing; feeds the evidence store</div></div></div>
+      <div class="ai-row"><span class="ai-rank">03</span><div><h4>Anomaly Detection</h4><p>Flags entries that deviate from historical patterns before they enter the final report.</p><div class="value-track"><div class="value-fill" style="width:72%;"></div></div><div class="value-label">Prevents embarrassing errors, speeds audits</div></div></div>
+      <div class="ai-row"><span class="ai-rank">04</span><div><h4>Predictive Forecasting</h4><p>Time-series models forecast next quarter's emissions from planned activity and seasonality.</p><div class="value-track"><div class="value-fill" style="width:64%;"></div></div><div class="value-label">Turns the tool into a planning system</div></div></div>
+      <div class="ai-row"><span class="ai-rank">05</span><div><h4>Scenario Simulator</h4><p>"What if we switch 40% of grid electricity to solar?" — models the delta on total emissions and targets.</p><div class="value-track"><div class="value-fill" style="width:60%;"></div></div><div class="value-label">Drives reduction decisions; a demo favourite</div></div></div>
+      <div class="ai-row"><span class="ai-rank">06</span><div><h4>Natural-Language Assistant (RAG)</h4><p>Chat grounded in the company's own emissions data plus GHG Protocol / BRSR knowledge.</p><div class="value-track"><div class="value-fill" style="width:52%;"></div></div><div class="value-label">Executive-friendly; strong in sales demos</div></div></div>
+    </div>
+  </section>
+
+  <section class="chapter" id="roadmap">
+    <div class="chapter-label">4 · Development Roadmap</div>
+    <h2>Three phases, each demo-able on its own</h2>
+
+    <div class="roadmap">
+      <div class="phase-card">
+        <div class="phase-tag"><b>Phase 1</b>Foundation &amp; MVP<br />4–6 weeks</div>
+        <div class="phase-rail"><ul>
+          <li>Organisation setup, sites, reporting periods</li>
+          <li>Manual entry — fuel, electricity, refrigerants, travel</li>
+          <li>Curated Scope 1 &amp; 2 factor library (DEFRA + CEA India + IPCC)</li>
+          <li>Calculation engine — Scope 1 &amp; 2, location- and market-based electricity</li>
+          <li>Core dashboard — total, by scope/site, month-over-month trend</li>
+          <li>User &amp; role management, audit log</li>
+          <li>Data-migration script from the existing SystemETA module</li>
+        </ul></div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-tag"><b>Phase 2</b>Scope 3, Reporting &amp; Integrations<br />6–8 weeks</div>
+        <div class="phase-rail"><ul>
+          <li>Scope 3 — purchased goods, business travel, employee commute</li>
+          <li>Supplier questionnaire portal</li>
+          <li>BRSR / BRSR Core export with evidence pack</li>
+          <li>GHG Protocol Corporate report export</li>
+          <li>SystemETA ERP connector — invoices → activity data</li>
+          <li>CSV/Excel bulk upload with column-mapping wizard</li>
+          <li>Intensity metrics, year-on-year comparisons</li>
+        </ul></div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-tag"><b>Phase 3</b>AI Layer &amp; Advanced<br />8–10 weeks</div>
+        <div class="phase-rail"><ul>
+          <li>OCR + LLM invoice ingestion pipeline</li>
+          <li>Emission-factor mapping assistant with confidence scoring</li>
+          <li>Anomaly detection on incoming activity data</li>
+          <li>12-month predictive forecasting</li>
+          <li>Scenario simulator — solar switch, EV fleet, supplier substitution</li>
+          <li>RAG assistant grounded in company + BRSR/GHG data</li>
+          <li>Product Carbon Footprint (ISO 14067) module</li>
+        </ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="next">
+    <div class="chapter-label">5 · Next Steps &amp; Open Questions</div>
+    <h2>Inputs needed before Phase 1 spec</h2>
+    <div class="checklist">
+      <div class="check-item"><span class="box"></span><span>Walkthrough of the current SystemETA carbon module — code and customer usage data.</span></div>
+      <div class="check-item"><span class="box"></span><span>Target customer profile — SystemETA ERP customers only, or open-market from day one?</span></div>
+      <div class="check-item"><span class="box"></span><span>Hosting preference — existing SystemETA cloud vs. dedicated deployment.</span></div>
+      <div class="check-item"><span class="box"></span><span>Priority order for regulatory templates — BRSR is mandatory; is CSRD / CDP relevant too?</span></div>
+      <div class="check-item"><span class="box"></span><span>Budget signal — paid factor databases (Climatiq / ecoinvent) vs. free/open sources.</span></div>
+    </div>
+
+    <h3 style="font-family: inherit; font-size: 1.1rem; margin: 2rem 0 0.8rem;">Proposed immediate actions</h3>
+    <div class="checklist">
+      <div class="check-item"><span class="box"></span><span>Present this report for review and align on the phased approach.</span></div>
+      <div class="check-item"><span class="box"></span><span>Once approved, produce a detailed Phase 1 spec — data model, API contract, UI wireframes.</span></div>
+      <div class="check-item"><span class="box"></span><span>Set up a fresh repository under the vsqcpl GitHub organisation.</span></div>
+      <div class="check-item"><span class="box"></span><span>Draft a two-slide customer-facing pitch to validate demand with existing SystemETA customers.</span></div>
+    </div>
+  </section>
+
+  <section class="chapter" style="border-bottom:none; padding-bottom: 1rem;">
+    <p class="bottom-line">Carbon footprinting is no longer a "nice to have" — it is a mandatory, regulated, and rapidly growing enterprise need in India. A standalone, AI-enabled application built alongside SystemETA is the right structural bet.</p>
+
+    <h3 style="font-family: inherit; font-size: 0.95rem; margin: 2.4rem 0 0.8rem; color: var(--muted);">References</h3>
+    <div class="refs">
+      <span>GHG Protocol Corporate Standard &amp; Scope 2 Guidance — World Resources Institute / WBCSD.</span>
+      <span>ISO 14067:2018 — Product Carbon Footprint methodology.</span>
+      <span>SEBI Business Responsibility and Sustainability Reporting (BRSR) framework and BRSR Core circulars (2021–2025).</span>
+      <span>Central Electricity Authority (CEA) — CO₂ Baseline Database for the Indian Power Sector.</span>
+      <span>DEFRA — UK Government GHG Conversion Factors for Company Reporting.</span>
+      <span>US EPA — Emission Factors for Greenhouse Gas Inventories.</span>
+      <span>IPCC — Guidelines for National Greenhouse Gas Inventories.</span>
+      <span>Product literature: SAP Sustainability Footprint Management, Persefoni, Climatiq, Plan A, Unravel Carbon, CarbonAnalytics, Zuno Carbon, Breathe ESG.</span>
+      <span>CEEW Green Finance Centre — "Advancing Corporate Climate Action through Emissions Disclosures in India" (2025).</span>
+    </div>
+  </section>
+</div>
+
+<div class="footer-cta">
+  <h2>See Phase 1 + 2 in motion</h2>
+  <p>A working prototype: org setup, the Scope 1/2/3 engine, supplier questionnaires, CSV/ERP import, and BRSR &amp; GHG Protocol exports.</p>
+  <a class="cta-btn" href="carbon-mvp.html" target="_blank" rel="noopener">Open the live demo ↗</a>
+  <p class="foot-note">Internal research report · Prepared by Priyansh, Intern — VSQC · July 2026</p>
+</div>
+
+</body>
+</html>

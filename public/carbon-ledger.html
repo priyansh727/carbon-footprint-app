@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Carbon Ledger — Personal Emissions Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+</head>
+<body>
+<style>
+  :root {
+    --bg: #eae6d9;
+    --surface: #f7f4ea;
+    --surface-2: #ffffff;
+    --ink: #22241e;
+    --muted: #6e7062;
+    --accent: #3d6355;
+    --accent-ink: #f7f4ea;
+    --accent-soft: #d8e2d6;
+    --line: #d6d0be;
+    --good: #3d6355;
+    --warn: #b8862e;
+    --bad: #ae402a;
+    --shadow: 0 1px 0 rgba(34,36,30,0.06);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14160f;
+      --surface: #1c1f17;
+      --surface-2: #23271c;
+      --ink: #eae6d6;
+      --muted: #9b9c88;
+      --accent: #74ae8e;
+      --accent-ink: #12160f;
+      --accent-soft: #2b3a2c;
+      --line: #313528;
+      --good: #74ae8e;
+      --warn: #d9a24b;
+      --bad: #e0765c;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14160f;
+    --surface: #1c1f17;
+    --surface-2: #23271c;
+    --ink: #eae6d6;
+    --muted: #9b9c88;
+    --accent: #74ae8e;
+    --accent-ink: #12160f;
+    --accent-soft: #2b3a2c;
+    --line: #313528;
+    --good: #74ae8e;
+    --warn: #d9a24b;
+    --bad: #e0765c;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #eae6d9;
+    --surface: #f7f4ea;
+    --surface-2: #ffffff;
+    --ink: #22241e;
+    --muted: #6e7062;
+    --accent: #3d6355;
+    --accent-ink: #f7f4ea;
+    --accent-soft: #d8e2d6;
+    --line: #d6d0be;
+    --good: #3d6355;
+    --warn: #b8862e;
+    --bad: #ae402a;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+
+  .num { font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Masthead ---------- */
+  .masthead { margin-bottom: 2.25rem; }
+  .mast-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.9rem;
+  }
+  .mast-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .mast-date {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .masthead h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-size: clamp(2.1rem, 5vw, 3rem);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.35rem;
+    text-wrap: balance;
+  }
+  .mast-sub {
+    color: var(--muted);
+    max-width: 42ch;
+    margin: 0;
+    font-size: 0.98rem;
+  }
+
+  /* ---------- Stat strip ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.75rem;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 1.1rem 1.25rem;
+  }
+  .stat-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  .stat-value small { font-size: 0.9rem; font-weight: 500; color: var(--muted); }
+  .stat-delta { font-size: 0.75rem; margin-top: 0.25rem; color: var(--muted); }
+  .stat-delta.up { color: var(--bad); }
+  .stat-delta.down { color: var(--good); }
+
+  /* ---------- Panels ---------- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.4rem 1.5rem;
+    box-shadow: var(--shadow);
+  }
+  .panel + .panel { margin-top: 1.5rem; }
+  .panel-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin: 0 0 1rem;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ---------- Entry ticket (form) ---------- */
+  .ticket { position: relative; }
+  .field-row { display: flex; gap: 0.75rem; margin-bottom: 0.85rem; }
+  .field { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+  .field label {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  select, input[type="number"], input[type="date"], input[type="text"] {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink);
+    padding: 0.55rem 0.6rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    width: 100%;
+  }
+  select:focus, input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .quick-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.9rem 0 1.1rem; }
+  .chip {
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.76rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--ink); }
+  .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .ticket-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px dashed var(--line);
+    margin-top: 0.4rem;
+    padding-top: 1rem;
+  }
+  .preview-co2 { font-size: 0.85rem; color: var(--muted); }
+  .preview-co2 b { color: var(--ink); font-size: 1.05rem; }
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    border-radius: 6px;
+    padding: 0.6rem 1.1rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.primary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* ---------- Chart ---------- */
+  .chart-wrap canvas { width: 100%; height: 150px; display: block; }
+  .chart-legend { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-top: 0.5rem; }
+
+  /* ---------- Gauge ---------- */
+  .gauge-track {
+    position: relative;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(to right, var(--good), var(--warn) 55%, var(--bad));
+    margin: 2.2rem 0 0.6rem;
+  }
+  .gauge-marker {
+    position: absolute;
+    top: -6px;
+    width: 2px;
+    height: 22px;
+    background: var(--ink);
+    opacity: 0.55;
+  }
+  .gauge-marker .gauge-tag {
+    position: absolute;
+    top: -1.55rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.62rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .gauge-you {
+    position: absolute;
+    top: -14px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 9px solid var(--ink);
+    transform: translateX(-7px);
+  }
+  .gauge-you .gauge-tag {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .gauge-caption { font-size: 0.78rem; color: var(--muted); margin-top: 2rem; }
+
+  /* ---------- Breakdown bars ---------- */
+  .bd-row { display: grid; grid-template-columns: 9rem 1fr 5.5rem; align-items: center; gap: 0.8rem; margin-bottom: 0.65rem; font-size: 0.85rem; }
+  .bd-row:last-child { margin-bottom: 0; }
+  .bd-track { height: 9px; background: var(--accent-soft); border-radius: 999px; overflow: hidden; }
+  .bd-fill { height: 100%; background: var(--accent); border-radius: 999px; }
+  .bd-value { text-align: right; color: var(--muted); }
+
+  /* ---------- Ledger table ---------- */
+  .ledger-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.87rem; min-width: 560px; }
+  thead th {
+    text-align: left;
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 0 0.5rem 0.55rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .date-group td {
+    padding-top: 1rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: none;
+  }
+  tbody td { padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--line); }
+  tbody tr.entry:hover { background: var(--surface-2); }
+  .co2-cell { text-align: right; }
+  .del-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+  }
+  .del-btn:hover { color: var(--bad); }
+  .empty-note { color: var(--muted); font-size: 0.88rem; padding: 1.2rem 0; text-align: center; }
+
+  /* ---------- Footer ---------- */
+  .foot-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.75rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.78rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .foot-actions { display: flex; gap: 0.6rem; }
+  .ghost-btn {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .ghost-btn:hover { border-color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="mast-top">
+      <span class="mast-label">Personal Emissions Ledger</span>
+      <span class="mast-date num" id="todayDate"></span>
+    </div>
+    <h1>Carbon Ledger</h1>
+    <p class="mast-sub">Log daily activity, see what it costs the atmosphere. Every entry is stored only in this browser.</p>
+  </header>
+
+  <section class="stats" id="statsRow"></section>
+
+  <div class="grid-2">
+    <div class="panel ticket">
+      <p class="panel-title">New Entry</p>
+      <div class="field-row">
+        <div class="field">
+          <label for="fCategory">Category</label>
+          <select id="fCategory"></select>
+        </div>
+        <div class="field">
+          <label for="fActivity">Activity</label>
+          <select id="fActivity"></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field" style="flex: 0 0 8rem;">
+          <label for="fQty">Quantity</label>
+          <input type="number" id="fQty" min="0" step="0.1" value="1" />
+        </div>
+        <div class="field">
+          <label for="fUnit">Unit</label>
+          <input type="text" id="fUnit" disabled />
+        </div>
+        <div class="field" style="flex: 0 0 9.5rem;">
+          <label for="fDate">Date</label>
+          <input type="date" id="fDate" />
+        </div>
+      </div>
+
+      <div class="quick-chips" id="quickChips"></div>
+
+      <div class="ticket-footer">
+        <div class="preview-co2">≈ <b class="num" id="previewCo2">0.0</b> kg CO₂e</div>
+        <button class="primary" id="addBtn">Add to ledger</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="panel-title">14-Day Trend</p>
+      <div class="chart-wrap">
+        <canvas id="trendChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <span id="chartMin">—</span>
+        <span id="chartMax">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Annualized Rate vs. Benchmarks</p>
+    <div class="gauge-track" id="gaugeTrack"></div>
+    <p class="gauge-caption">Based on your logged average, projected across a full year — for orientation only, not a footprint audit.</p>
+  </div>
+
+  <div class="grid-2" style="margin-top: 1.5rem;">
+    <div class="panel">
+      <p class="panel-title">By Category</p>
+      <div id="breakdown"></div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Emission Factors Used</p>
+      <div id="factorNote" style="font-size: 0.82rem; color: var(--muted);"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Ledger</p>
+    <div class="ledger-scroll">
+      <table id="ledgerTable">
+        <thead>
+          <tr>
+            <th>Activity</th>
+            <th>Quantity</th>
+            <th style="text-align:right;">CO₂e</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+    </div>
+    <div class="foot-bar">
+      <span id="entryCount">0 entries</span>
+      <div class="foot-actions">
+        <button class="ghost-btn" id="exportBtn">Export CSV</button>
+        <button class="ghost-btn" id="clearBtn">Clear all</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  "use strict";
+
+  var FACTORS = {
+    transport: { label: "Transport", activities: {
+      car_petrol: { label: "Car (petrol)", factor: 0.192, unit: "km" },
+      car_diesel: { label: "Car (diesel)", factor: 0.171, unit: "km" },
+      car_ev:     { label: "Car (electric)", factor: 0.053, unit: "km" },
+      motorbike:  { label: "Motorbike", factor: 0.113, unit: "km" },
+      bus:        { label: "Bus", factor: 0.105, unit: "km" },
+      train:      { label: "Train", factor: 0.041, unit: "km" },
+      flight_short:{ label: "Flight, short-haul", factor: 0.255, unit: "km" },
+      flight_long: { label: "Flight, long-haul", factor: 0.150, unit: "km" }
+    }},
+    energy: { label: "Home Energy", activities: {
+      electricity: { label: "Electricity", factor: 0.475, unit: "kWh" },
+      natgas:      { label: "Natural gas", factor: 0.203, unit: "kWh" },
+      lpg:         { label: "LPG", factor: 2.983, unit: "kg" }
+    }},
+    food: { label: "Food", activities: {
+      meal_meat:  { label: "Meal, meat-heavy", factor: 3.3, unit: "meal" },
+      meal_mixed: { label: "Meal, mixed", factor: 1.7, unit: "meal" },
+      meal_veg:   { label: "Meal, vegetarian", factor: 0.9, unit: "meal" },
+      meal_vegan: { label: "Meal, vegan", factor: 0.7, unit: "meal" },
+      dairy:      { label: "Dairy", factor: 1.2, unit: "L" }
+    }},
+    goods: { label: "Goods & Waste", activities: {
+      parcel:   { label: "Online parcel delivered", factor: 6.0, unit: "parcel" },
+      clothing: { label: "New clothing item", factor: 10.0, unit: "item" },
+      waste:    { label: "General waste", factor: 0.5, unit: "kg" }
+    }}
+  };
+
+  var QUICK = [
+    { cat: "transport", act: "car_petrol", qty: 10, label: "Drove 10 km" },
+    { cat: "transport", act: "bus", qty: 8, label: "Bus 8 km" },
+    { cat: "energy", act: "electricity", qty: 5, label: "5 kWh electricity" },
+    { cat: "food", act: "meal_meat", qty: 1, label: "Meat meal" },
+    { cat: "food", act: "meal_veg", qty: 1, label: "Veg meal" },
+    { cat: "goods", act: "parcel", qty: 1, label: "Parcel delivered" }
+  ];
+
+  var STORE_KEY = "carbon-ledger-entries-v1";
+
+  function loadEntries() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveEntries(list) {
+    localStorage.setItem(STORE_KEY, JSON.stringify(list));
+  }
+  var entries = loadEntries();
+
+  function todayStr() {
+    var d = new Date();
+    return d.toISOString().slice(0, 10);
+  }
+  function fmt(n, digits) {
+    digits = digits === undefined ? 1 : digits;
+    return Number(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+
+  // ---------- Header date ----------
+  document.getElementById("todayDate").textContent = new Date().toLocaleDateString(undefined, {
+    weekday: "short", year: "numeric", month: "short", day: "numeric"
+  });
+
+  // ---------- Form population ----------
+  var catSel = document.getElementById("fCategory");
+  var actSel = document.getElementById("fActivity");
+  var qtyInput = document.getElementById("fQty");
+  var unitInput = document.getElementById("fUnit");
+  var dateInput = document.getElementById("fDate");
+  var previewEl = document.getElementById("previewCo2");
+
+  Object.keys(FACTORS).forEach(function(catKey) {
+    var opt = document.createElement("option");
+    opt.value = catKey;
+    opt.textContent = FACTORS[catKey].label;
+    catSel.appendChild(opt);
+  });
+
+  function populateActivities() {
+    var cat = FACTORS[catSel.value];
+    actSel.innerHTML = "";
+    Object.keys(cat.activities).forEach(function(actKey) {
+      var a = cat.activities[actKey];
+      var opt = document.createElement("option");
+      opt.value = actKey;
+      opt.textContent = a.label;
+      actSel.appendChild(opt);
+    });
+    updateUnit();
+  }
+  function currentActivity() {
+    return FACTORS[catSel.value].activities[actSel.value];
+  }
+  function updateUnit() {
+    unitInput.value = currentActivity().unit;
+    updatePreview();
+  }
+  function updatePreview() {
+    var a = currentActivity();
+    var qty = parseFloat(qtyInput.value) || 0;
+    previewEl.textContent = fmt(a.factor * qty, 1);
+  }
+
+  catSel.addEventListener("change", populateActivities);
+  actSel.addEventListener("change", updateUnit);
+  qtyInput.addEventListener("input", updatePreview);
+  dateInput.value = todayStr();
+  populateActivities();
+
+  // ---------- Quick chips ----------
+  var chipsWrap = document.getElementById("quickChips");
+  QUICK.forEach(function(q) {
+    var chip = document.createElement("button");
+    chip.className = "chip";
+    chip.type = "button";
+    chip.textContent = q.label;
+    chip.addEventListener("click", function() {
+      catSel.value = q.cat;
+      populateActivities();
+      actSel.value = q.act;
+      updateUnit();
+      qtyInput.value = q.qty;
+      updatePreview();
+    });
+    chipsWrap.appendChild(chip);
+  });
+
+  // ---------- Add entry ----------
+  document.getElementById("addBtn").addEventListener("click", function() {
+    var a = currentActivity();
+    var qty = parseFloat(qtyInput.value);
+    if (!qty || qty <= 0) { qtyInput.focus(); return; }
+    entries.push({
+      id: Date.now() + Math.random().toString(16).slice(2),
+      date: dateInput.value || todayStr(),
+      cat: catSel.value,
+      act: actSel.value,
+      label: a.label,
+      qty: qty,
+      unit: a.unit,
+      co2: a.factor * qty
+    });
+    saveEntries(entries);
+    qtyInput.value = 1;
+    updatePreview();
+    renderAll();
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", function() {
+    if (entries.length && confirm("Clear all logged entries? This cannot be undone.")) {
+      entries = [];
+      saveEntries(entries);
+      renderAll();
+    }
+  });
+
+  document.getElementById("exportBtn").addEventListener("click", function() {
+    if (!entries.length) return;
+    var rows = [["date", "category", "activity", "quantity", "unit", "kg_co2e"]];
+    entries.slice().sort(function(a, b) { return a.date < b.date ? -1 : 1; }).forEach(function(e) {
+      rows.push([e.date, FACTORS[e.cat].label, e.label, e.qty, e.unit, e.co2.toFixed(2)]);
+    });
+    var csv = rows.map(function(r) {
+      return r.map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(",");
+    }).join("\n");
+    var blob = new Blob([csv], { type: "text/csv" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "carbon-ledger.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // ---------- Date helpers ----------
+  function daysAgo(n) {
+    var d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  }
+  function sumForDate(dateStr) {
+    return entries.filter(function(e) { return e.date === dateStr; })
+      .reduce(function(s, e) { return s + e.co2; }, 0);
+  }
+  function sumRange(days) {
+    var cutoff = daysAgo(days - 1);
+    return entries.filter(function(e) { return e.date >= cutoff; })
+      .reduce(function(s, e) { return s + e.co2; }, 0);
+  }
+
+  // ---------- Stats ----------
+  function renderStats() {
+    var today = sumForDate(todayStr());
+    var yesterday = sumForDate(daysAgo(1));
+    var last7 = sumRange(7);
+    var last30 = sumRange(30);
+    var dailyAvg = entries.length ? (last30 / Math.min(30, activeDaySpan())) : 0;
+    var annual = dailyAvg * 365;
+
+    var delta = today - yesterday;
+    var deltaClass = delta > 0.05 ? "up" : (delta < -0.05 ? "down" : "");
+    var deltaSign = delta > 0 ? "+" : "";
+
+    var stats = [
+      { label: "Today", value: fmt(today, 1), unit: "kg", delta: entries.length ? (deltaSign + fmt(delta, 1) + " kg vs yesterday") : "", deltaClass: deltaClass },
+      { label: "7-Day Total", value: fmt(last7, 1), unit: "kg", delta: fmt(last7 / 7, 1) + " kg/day avg", deltaClass: "" },
+      { label: "30-Day Total", value: fmt(last30, 1), unit: "kg", delta: "", deltaClass: "" },
+      { label: "Annualized", value: fmt(annual / 1000, 2), unit: "t CO₂e", delta: "projected at current rate", deltaClass: "" }
+    ];
+
+    var row = document.getElementById("statsRow");
+    row.innerHTML = "";
+    stats.forEach(function(s) {
+      var el = document.createElement("div");
+      el.className = "stat";
+      el.innerHTML =
+        '<div class="stat-label">' + s.label + '</div>' +
+        '<div class="stat-value num">' + s.value + ' <small>' + s.unit + '</small></div>' +
+        (s.delta ? '<div class="stat-delta ' + s.deltaClass + '">' + s.delta + '</div>' : '');
+      row.appendChild(el);
+    });
+    return { annualTons: annual / 1000 };
+  }
+
+  function activeDaySpan() {
+    if (!entries.length) return 1;
+    var dates = entries.map(function(e) { return e.date; });
+    var min = dates.reduce(function(a, b) { return a < b ? a : b; });
+    var spanDays = Math.round((new Date(todayStr()) - new Date(min)) / 86400000) + 1;
+    return Math.max(1, Math.min(30, spanDays));
+  }
+
+  // ---------- Gauge ----------
+  function renderGauge(annualTons) {
+    var track = document.getElementById("gaugeTrack");
+    track.innerHTML = "";
+    var scaleMax = 20; // tons/year
+    var marks = [
+      { value: 2.3, label: "2030 target" },
+      { value: 4.7, label: "Global avg" },
+      { value: 11, label: "High-income avg" }
+    ];
+    marks.forEach(function(m) {
+      var pct = Math.min(100, (m.value / scaleMax) * 100);
+      var el = document.createElement("div");
+      el.className = "gauge-marker";
+      el.style.left = pct + "%";
+      el.innerHTML = '<span class="gauge-tag">' + m.label + '</span>';
+      track.appendChild(el);
+    });
+    var yourPct = Math.min(100, Math.max(0, (annualTons / scaleMax) * 100));
+    var you = document.createElement("div");
+    you.className = "gauge-you";
+    you.style.left = yourPct + "%";
+    you.innerHTML = '<span class="gauge-tag">You: ' + fmt(annualTons, 1) + 't</span>';
+    track.appendChild(you);
+  }
+
+  // ---------- Breakdown ----------
+  function renderBreakdown() {
+    var totals = {};
+    var grand = 0;
+    Object.keys(FACTORS).forEach(function(k) { totals[k] = 0; });
+    entries.forEach(function(e) { totals[e.cat] += e.co2; grand += e.co2; });
+
+    var wrap = document.getElementById("breakdown");
+    wrap.innerHTML = "";
+    if (!grand) {
+      wrap.innerHTML = '<div class="empty-note">No entries yet — log something to see your breakdown.</div>';
+      return;
+    }
+    Object.keys(FACTORS).forEach(function(k) {
+      var pct = grand ? (totals[k] / grand) * 100 : 0;
+      var row = document.createElement("div");
+      row.className = "bd-row";
+      row.innerHTML =
+        '<span>' + FACTORS[k].label + '</span>' +
+        '<span class="bd-track"><span class="bd-fill" style="width:' + pct.toFixed(1) + '%;"></span></span>' +
+        '<span class="bd-value num">' + fmt(totals[k], 1) + ' kg</span>';
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------- Factor note ----------
+  function renderFactorNote() {
+    var el = document.getElementById("factorNote");
+    el.innerHTML =
+      'Approximate averages (kg CO₂e): car petrol 0.19/km · electricity 0.48/kWh · ' +
+      'meat meal 3.3 · flight short-haul 0.26/km · parcel 6.0. Figures are indicative ' +
+      'planning estimates, not a certified audit.';
+  }
+
+  // ---------- Chart ----------
+  function renderChart() {
+    var canvas = document.getElementById("trendChart");
+    var ctx = canvas.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = canvas.clientWidth || 400;
+    var cssH = 150;
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    var days = [];
+    for (var i = 13; i >= 0; i--) days.push(daysAgo(i));
+    var values = days.map(sumForDate);
+    var maxVal = Math.max.apply(null, values.concat([1]));
+
+    var padL = 6, padR = 6, padT = 10, padB = 18;
+    var w = cssW - padL - padR;
+    var h = cssH - padT - padB;
+
+    var styles = getComputedStyle(document.documentElement);
+    var lineColor = styles.getPropertyValue("--line").trim();
+    var accent = styles.getPropertyValue("--accent").trim();
+    var muted = styles.getPropertyValue("--muted").trim();
+
+    // faint grid
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 1;
+    for (var g = 0; g <= 3; g++) {
+      var gy = padT + (h / 3) * g;
+      ctx.beginPath();
+      ctx.moveTo(padL, gy);
+      ctx.lineTo(padL + w, gy);
+      ctx.stroke();
+    }
+
+    var stepX = w / (values.length - 1);
+    function xAt(i) { return padL + stepX * i; }
+    function yAt(v) { return padT + h - (v / maxVal) * h; }
+
+    // area fill
+    ctx.beginPath();
+    ctx.moveTo(xAt(0), padT + h);
+    values.forEach(function(v, i) { ctx.lineTo(xAt(i), yAt(v)); });
+    ctx.lineTo(xAt(values.length - 1), padT + h);
+    ctx.closePath();
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.14;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // line
+    ctx.beginPath();
+    values.forEach(function(v, i) {
+      var x = xAt(i), y = yAt(v);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // emphasized endpoint
+    var lastX = xAt(values.length - 1), lastY = yAt(values[values.length - 1]);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = accent;
+    ctx.fill();
+
+    // axis labels
+    ctx.fillStyle = muted;
+    ctx.font = "10px -apple-system, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(days[0].slice(5), padL, cssH - 4);
+    ctx.textAlign = "right";
+    ctx.fillText("today", padL + w, cssH - 4);
+
+    document.getElementById("chartMin").textContent = "0 kg";
+    document.getElementById("chartMax").textContent = fmt(maxVal, 1) + " kg peak day";
+  }
+
+  // ---------- Ledger table ----------
+  function renderLedger() {
+    var body = document.getElementById("ledgerBody");
+    body.innerHTML = "";
+    document.getElementById("entryCount").textContent =
+      entries.length + (entries.length === 1 ? " entry" : " entries");
+
+    if (!entries.length) {
+      var tr = document.createElement("tr");
+      tr.innerHTML = '<td colspan="4" class="empty-note">Your ledger is empty. Add your first entry above.</td>';
+      body.appendChild(tr);
+      return;
+    }
+
+    var byDate = {};
+    entries.forEach(function(e) {
+      (byDate[e.date] = byDate[e.date] || []).push(e);
+    });
+    var dates = Object.keys(byDate).sort(function(a, b) { return a < b ? 1 : -1; });
+
+    dates.forEach(function(date) {
+      var groupRow = document.createElement("tr");
+      groupRow.className = "date-group";
+      var dLabel = new Date(date + "T00:00:00").toLocaleDateString(undefined, {
+        weekday: "short", month: "short", day: "numeric"
+      });
+      groupRow.innerHTML = '<td colspan="4">' + dLabel + '</td>';
+      body.appendChild(groupRow);
+
+      byDate[date].forEach(function(e) {
+        var row = document.createElement("tr");
+        row.className = "entry";
+        row.innerHTML =
+          '<td>' + e.label + '</td>' +
+          '<td class="num">' + e.qty + ' ' + e.unit + '</td>' +
+          '<td class="co2-cell num">' + fmt(e.co2, 1) + '</td>' +
+          '<td><button class="del-btn" title="Delete entry" data-id="' + e.id + '">✕</button></td>';
+        body.appendChild(row);
+      });
+    });
+
+    body.querySelectorAll(".del-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var id = btn.getAttribute("data-id");
+        entries = entries.filter(function(e) { return e.id !== id; });
+        saveEntries(entries);
+        renderAll();
+      });
+    });
+  }
+
+  function renderAll() {
+    var stats = renderStats();
+    renderGauge(stats.annualTons);
+    renderBreakdown();
+    renderFactorNote();
+    renderChart();
+    renderLedger();
+  }
+
+  window.addEventListener("resize", renderChart);
+
+  renderAll();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Foodprint — Track the Carbon on Your Plate</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>">
+</head>
+<body>
+<style>
+  :root {
+    --bg: #1c2621;
+    --surface: #24322b;
+    --surface-2: #2c3c33;
+    --ink: #f3efe3;
+    --muted: #a3b0a2;
+    --muted-2: #6d7a6c;
+    --accent: #e8763c;
+    --accent-ink: #241205;
+    --line: rgba(243,239,227,0.12);
+    --c-meat: #c4453a;
+    --c-dairy: #dba53c;
+    --c-plant: #6fae5c;
+    --c-bev: #9b6b9e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(1100px 500px at 50% -12%, rgba(232,118,60,0.10), transparent 60%),
+      var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  .num { font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace; font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 2.6rem 1.5rem 5rem; }
+
+  /* ---------- Masthead ---------- */
+  .masthead { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem; border-bottom: 1px solid var(--line); padding-bottom: 1.4rem; }
+  .eyebrow { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 0.5rem; }
+  h1 {
+    font-size: clamp(2.1rem, 5vw, 2.9rem); margin: 0; font-weight: 800; letter-spacing: -0.015em;
+    text-wrap: balance; text-shadow: 0 2px 18px rgba(232,118,60,0.18);
+  }
+  .masthead-sub { color: var(--muted); font-size: 0.92rem; max-width: 40ch; margin-top: 0.4rem; }
+  .masthead-date { font-size: 0.78rem; color: var(--muted-2); text-align: right; }
+
+  /* ---------- Panel ---------- */
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 1.4rem 1.5rem; }
+  .panel + .panel { margin-top: 1.2rem; }
+  .panel-title { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 0 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+  .panel-title .src { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted-2); }
+
+  /* ---------- Stat row ---------- */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin-bottom: 1.4rem; }
+  @media (max-width: 720px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-cell { background: var(--surface); padding: 1.05rem 1.2rem; }
+  .stat-label { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .stat-value { font-size: 1.55rem; font-weight: 800; }
+  .stat-value small { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+  .stat-note { font-size: 0.74rem; color: var(--muted-2); margin-top: 0.25rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.2rem; align-items: start; }
+  @media (max-width: 820px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* ---------- Category pills ---------- */
+  .pill-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+  .pill {
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--muted);
+    font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 999px; cursor: pointer;
+  }
+  .pill[data-active="true"] { color: var(--bg); border-color: transparent; }
+  .pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- Form ---------- */
+  .field-row { display: flex; gap: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 0.3rem; }
+  .field label { font-size: 0.66rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  select, input[type="number"], input[type="date"] {
+    background: var(--surface-2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 8px; padding: 0.55rem 0.65rem; font-size: 0.88rem; font-family: inherit; width: 100%;
+  }
+  select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .preview-line { font-size: 0.85rem; color: var(--muted); margin: 0.9rem 0; }
+  .preview-line b { color: var(--ink); font-size: 1.05rem; }
+  button.primary {
+    background: var(--accent); color: var(--accent-ink); border: none; border-radius: 8px;
+    padding: 0.62rem 1.15rem; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.ghost {
+    background: none; border: 1px solid var(--line); color: var(--ink);
+    border-radius: 8px; padding: 0.45rem 0.85rem; font-size: 0.8rem; cursor: pointer;
+  }
+  button.ghost:hover { border-color: var(--accent); }
+
+  /* ---------- Chart ---------- */
+  canvas { width: 100%; display: block; height: 150px; }
+  .chart-legend { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted-2); margin-top: 0.5rem; }
+
+  /* ---------- Breakdown bars ---------- */
+  .bd-row { display: grid; grid-template-columns: 7.5rem 1fr 4.8rem; align-items: center; gap: 0.7rem; margin-bottom: 0.65rem; font-size: 0.85rem; }
+  .bd-track { height: 9px; background: rgba(243,239,227,0.08); border-radius: 999px; overflow: hidden; }
+  .bd-fill { height: 100%; border-radius: 999px; }
+  .bd-value { text-align: right; color: var(--muted); }
+
+  /* ---------- Swap tip ---------- */
+  .tip-card { display: flex; gap: 1rem; align-items: flex-start; }
+  .tip-icon { flex: none; width: 2.4rem; height: 2.4rem; border-radius: 50%; background: rgba(232,118,60,0.14); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+  .tip-body p { margin: 0 0 0.3rem; font-size: 0.92rem; }
+  .tip-body .stat-note { margin-top: 0.35rem; }
+
+  /* ---------- Log table ---------- */
+  .log-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; min-width: 500px; }
+  thead th { text-align: left; font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 0 0.5rem 0.55rem; border-bottom: 1px solid var(--line); }
+  .date-group td { padding-top: 1rem; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-2); border-bottom: none; }
+  tbody td { padding: 0.55rem 0.5rem; border-bottom: 1px solid var(--line); }
+  tbody tr.entry:hover { background: rgba(243,239,227,0.02); }
+  .group-chip { font-size: 0.65rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 700; }
+  .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.95rem; }
+  .del-btn:hover { color: var(--c-meat); }
+  .empty-note { color: var(--muted); font-size: 0.88rem; padding: 1.2rem 0; text-align: center; }
+
+  .foot-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--muted); flex-wrap: wrap; gap: 0.75rem; }
+  .foot-actions { display: flex; gap: 0.6rem; }
+
+  .fine-print { font-size: 0.74rem; color: var(--muted-2); margin-top: 2rem; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <div class="eyebrow">Foodprint</div>
+      <h1>What's on your plate costs the atmosphere</h1>
+      <p class="masthead-sub">Log meals, see the carbon behind them, and find the easiest swap to cut it.</p>
+    </div>
+    <div class="masthead-date num" id="todayDate"></div>
+  </header>
+
+  <section class="stat-grid" id="statGrid"></section>
+
+  <div class="grid-2">
+    <div class="panel">
+      <p class="panel-title">Log Something You Ate</p>
+      <div class="pill-row" id="categoryPills"></div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fItem">Item</label>
+          <select id="fItem"></select>
+        </div>
+        <div class="field" style="flex: 0 0 7rem;">
+          <label for="fQty">Amount</label>
+          <input type="number" id="fQty" min="0" step="1" value="150" />
+        </div>
+        <div class="field" style="flex: 0 0 5rem;">
+          <label>Unit</label>
+          <input type="text" id="fUnit" disabled />
+        </div>
+        <div class="field" style="flex: 0 0 9rem;">
+          <label for="fDate">Date</label>
+          <input type="date" id="fDate" />
+        </div>
+      </div>
+      <p class="preview-line">≈ <b class="num" id="fPreview">0.0</b> kg CO₂e</p>
+      <button class="primary" id="addBtn">Add to log</button>
+    </div>
+
+    <div class="panel">
+      <p class="panel-title">14-Day Trend <span class="src">kg CO₂e / day</span></p>
+      <canvas id="trendChart"></canvas>
+      <div class="chart-legend"><span id="chartMin">—</span><span id="chartMax">—</span></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top: 1.2rem;">
+    <div class="panel">
+      <p class="panel-title">Today, by Food Group</p>
+      <div id="breakdown"></div>
+    </div>
+    <div class="panel">
+      <p class="panel-title">Swap of the Day</p>
+      <div class="tip-card">
+        <div class="tip-icon">🔁</div>
+        <div class="tip-body" id="swapTip"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Log <span class="src" id="entryCount">0 entries</span></p>
+    <div class="log-scroll">
+      <table>
+        <thead><tr><th>Item</th><th>Amount</th><th style="text-align:right;">CO₂e</th><th></th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+    <div class="foot-bar">
+      <span id="footNote"></span>
+      <div class="foot-actions">
+        <button class="ghost" id="exportBtn">Export CSV</button>
+        <button class="ghost" id="clearBtn">Clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="fine-print">Factors are illustrative global averages (production-stage, per kg or per serving) — useful for comparing meals, not a certified lifecycle audit.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE_KEY = "foodprint-v1";
+
+  var FOOD = {
+    meat: { label: "Meat & Seafood", color: "var(--c-meat)", mode: "weight", items: {
+      beef:    { label: "Beef", factor: 60, defaultQty: 150 },
+      lamb:    { label: "Lamb", factor: 39, defaultQty: 150 },
+      pork:    { label: "Pork", factor: 12, defaultQty: 150 },
+      chicken: { label: "Chicken", factor: 9, defaultQty: 150 },
+      shrimp:  { label: "Shrimp / prawns", factor: 18, defaultQty: 100 },
+      fish:    { label: "Fish (farmed)", factor: 6, defaultQty: 150 }
+    }},
+    dairy: { label: "Dairy & Eggs", color: "var(--c-dairy)", mode: "weight", items: {
+      cheese: { label: "Cheese", factor: 21, defaultQty: 30 },
+      milk:   { label: "Milk", factor: 3.2, defaultQty: 200 },
+      yogurt: { label: "Yogurt", factor: 2.5, defaultQty: 150 },
+      eggs:   { label: "Eggs (approx. 2)", factor: 4.5, defaultQty: 100 }
+    }},
+    plant: { label: "Plant-Based", color: "var(--c-plant)", mode: "weight", items: {
+      tofu:       { label: "Tofu", factor: 2, defaultQty: 150 },
+      legumes:    { label: "Beans & lentils", factor: 0.9, defaultQty: 150 },
+      rice:       { label: "Rice (cooked)", factor: 4, defaultQty: 180 },
+      bread:      { label: "Bread & grains", factor: 1.5, defaultQty: 80 },
+      potatoes:   { label: "Potatoes", factor: 0.3, defaultQty: 200 },
+      vegetables: { label: "Vegetables", factor: 0.5, defaultQty: 150 },
+      fruit:      { label: "Fruit", factor: 0.5, defaultQty: 150 },
+      nuts:       { label: "Nuts", factor: 0.9, defaultQty: 30 }
+    }},
+    beverage: { label: "Beverages", color: "var(--c-bev)", mode: "serving", items: {
+      coffee: { label: "Coffee", factor: 0.28, defaultQty: 1, unitLabel: "cup" },
+      tea:    { label: "Tea", factor: 0.02, defaultQty: 1, unitLabel: "cup" },
+      beer:   { label: "Beer", factor: 0.18, defaultQty: 1, unitLabel: "serving" },
+      wine:   { label: "Wine", factor: 0.23, defaultQty: 1, unitLabel: "glass" },
+      soda:   { label: "Soft drink", factor: 0.10, defaultQty: 1, unitLabel: "can" }
+    }}
+  };
+
+  var CAR_FACTOR = 0.192; // kg CO2e per km, average petrol car — for the "km equivalent" note
+
+  function load() {
+    try { var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : []; }
+    catch (e) { return []; }
+  }
+  var entries = load();
+  function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }
+
+  function fmt(n, d) { d = d === undefined ? 1 : d; return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  function daysAgo(n) { var d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+
+  document.getElementById("todayDate").textContent = new Date().toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+
+  // ---------- Category pills + form ----------
+  var pillsWrap = document.getElementById("categoryPills");
+  var fItem = document.getElementById("fItem");
+  var fQty = document.getElementById("fQty");
+  var fUnit = document.getElementById("fUnit");
+  var fDate = document.getElementById("fDate");
+  var fPreview = document.getElementById("fPreview");
+  var activeCat = "meat";
+
+  Object.keys(FOOD).forEach(function (key) {
+    var pill = document.createElement("button");
+    pill.type = "button";
+    pill.className = "pill";
+    pill.textContent = FOOD[key].label;
+    pill.dataset.cat = key;
+    pill.dataset.active = key === activeCat ? "true" : "false";
+    pill.style.background = key === activeCat ? FOOD[key].color : "";
+    pill.addEventListener("click", function () {
+      activeCat = key;
+      Object.keys(FOOD).forEach(function (k2) {
+        var p = pillsWrap.querySelector('[data-cat="' + k2 + '"]');
+        p.dataset.active = k2 === activeCat ? "true" : "false";
+        p.style.background = k2 === activeCat ? FOOD[k2].color : "";
+      });
+      populateItems();
+    });
+    pillsWrap.appendChild(pill);
+  });
+
+  function currentCat() { return FOOD[activeCat]; }
+  function currentItem() { return currentCat().items[fItem.value]; }
+
+  function populateItems() {
+    var cat = currentCat();
+    fItem.innerHTML = "";
+    Object.keys(cat.items).forEach(function (k) {
+      var opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = cat.items[k].label;
+      fItem.appendChild(opt);
+    });
+    applyItemDefaults();
+  }
+  function applyItemDefaults() {
+    var item = currentItem();
+    fQty.value = item.defaultQty;
+    fUnit.value = currentCat().mode === "weight" ? "g" : (item.unitLabel || "serving");
+    updatePreview();
+  }
+  function updatePreview() {
+    var qty = parseFloat(fQty.value) || 0;
+    var cat = currentCat(), item = currentItem();
+    var co2 = cat.mode === "weight" ? (qty / 1000) * item.factor : qty * item.factor;
+    fPreview.textContent = fmt(co2, 2);
+  }
+
+  fItem.addEventListener("change", applyItemDefaults);
+  fQty.addEventListener("input", updatePreview);
+  fDate.value = todayStr();
+  populateItems();
+
+  document.getElementById("addBtn").addEventListener("click", function () {
+    var qty = parseFloat(fQty.value);
+    if (!qty || qty <= 0) { fQty.focus(); return; }
+    var cat = currentCat(), item = currentItem();
+    var co2 = cat.mode === "weight" ? (qty / 1000) * item.factor : qty * item.factor;
+    entries.push({
+      id: Date.now() + Math.random().toString(16).slice(2),
+      date: fDate.value || todayStr(),
+      category: activeCat,
+      label: item.label,
+      qty: qty,
+      unit: fUnit.value,
+      co2: co2
+    });
+    persist();
+    applyItemDefaults();
+    renderAll();
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", function () {
+    if (entries.length && confirm("Clear your whole log? This cannot be undone.")) {
+      entries = [];
+      persist();
+      renderAll();
+    }
+  });
+
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    if (!entries.length) return;
+    var rows = [["date", "group", "item", "amount", "unit", "kg_co2e"]];
+    entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).forEach(function (e) {
+      rows.push([e.date, FOOD[e.category].label, e.label, e.qty, e.unit, e.co2.toFixed(3)]);
+    });
+    var csv = rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(","); }).join("\n");
+    var blob = new Blob([csv], { type: "text/csv" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "foodprint-log.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // ---------- Aggregation helpers ----------
+  function sumForDate(dateStr) { return entries.filter(function (e) { return e.date === dateStr; }).reduce(function (s, e) { return s + e.co2; }, 0); }
+  function sumRange(days) { var cutoff = daysAgo(days - 1); return entries.filter(function (e) { return e.date >= cutoff; }).reduce(function (s, e) { return s + e.co2; }, 0); }
+  function activeDaySpan() {
+    if (!entries.length) return 1;
+    var min = entries.map(function (e) { return e.date; }).reduce(function (a, b) { return a < b ? a : b; });
+    var span = Math.round((new Date(todayStr()) - new Date(min)) / 86400000) + 1;
+    return Math.max(1, Math.min(14, span));
+  }
+
+  // ---------- Stats ----------
+  function renderStats() {
+    var today = sumForDate(todayStr());
+    var last7 = sumRange(7);
+    var last14 = sumRange(14);
+    var dailyAvg = entries.length ? last14 / activeDaySpan() : 0;
+    var km = today / CAR_FACTOR;
+
+    var cards = [
+      { label: "Today", value: fmt(today, 2), unit: "kg", note: km > 0.05 ? "≈ " + fmt(km, 1) + " km driven" : "log a meal to see this" },
+      { label: "7-Day Total", value: fmt(last7, 2), unit: "kg", note: fmt(last7 / 7, 2) + " kg/day avg" },
+      { label: "14-Day Total", value: fmt(last14, 2), unit: "kg", note: entries.length + " entries logged" },
+      { label: "Daily Average", value: fmt(dailyAvg, 2), unit: "kg", note: "across active days" }
+    ];
+    var grid = document.getElementById("statGrid");
+    grid.innerHTML = "";
+    cards.forEach(function (c) {
+      var el = document.createElement("div");
+      el.className = "stat-cell";
+      el.innerHTML = '<div class="stat-label">' + c.label + '</div><div class="stat-value num">' + c.value + ' <small>' + c.unit + '</small></div><div class="stat-note">' + c.note + '</div>';
+      grid.appendChild(el);
+    });
+  }
+
+  // ---------- Chart ----------
+  function renderChart() {
+    var canvas = document.getElementById("trendChart");
+    var ctx = canvas.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = canvas.clientWidth || 400, cssH = 150;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    var days = [];
+    for (var i = 13; i >= 0; i--) days.push(daysAgo(i));
+    var values = days.map(sumForDate);
+    var maxVal = Math.max.apply(null, values.concat([1]));
+
+    var padL = 6, padR = 6, padT = 10, padB = 18;
+    var w = cssW - padL - padR, h = cssH - padT - padB;
+
+    ctx.strokeStyle = "rgba(243,239,227,0.08)";
+    ctx.lineWidth = 1;
+    for (var g = 0; g <= 3; g++) {
+      var gy = padT + (h / 3) * g;
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + w, gy); ctx.stroke();
+    }
+
+    var stepX = w / (values.length - 1);
+    function xAt(i) { return padL + stepX * i; }
+    function yAt(v) { return padT + h - (v / maxVal) * h; }
+
+    ctx.beginPath();
+    ctx.moveTo(xAt(0), padT + h);
+    values.forEach(function (v, i) { ctx.lineTo(xAt(i), yAt(v)); });
+    ctx.lineTo(xAt(values.length - 1), padT + h);
+    ctx.closePath();
+    var grad = ctx.createLinearGradient(0, padT, 0, padT + h);
+    grad.addColorStop(0, "rgba(232,118,60,0.32)");
+    grad.addColorStop(1, "rgba(232,118,60,0)");
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.beginPath();
+    values.forEach(function (v, i) { var x = xAt(i), y = yAt(v); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+    ctx.strokeStyle = "#e8763c";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    var lastX = xAt(values.length - 1), lastY = yAt(values[values.length - 1]);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#e8763c";
+    ctx.fill();
+
+    ctx.fillStyle = "#a3b0a2";
+    ctx.font = "10px -apple-system, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(days[0].slice(5), padL, cssH - 4);
+    ctx.textAlign = "right";
+    ctx.fillText("today", padL + w, cssH - 4);
+
+    document.getElementById("chartMin").textContent = "0 kg";
+    document.getElementById("chartMax").textContent = fmt(maxVal, 2) + " kg peak day";
+  }
+
+  // ---------- Breakdown ----------
+  function renderBreakdown() {
+    var todayList = entries.filter(function (e) { return e.date === todayStr(); });
+    var totals = {}; var grand = 0;
+    Object.keys(FOOD).forEach(function (k) { totals[k] = 0; });
+    todayList.forEach(function (e) { totals[e.category] += e.co2; grand += e.co2; });
+
+    var wrap = document.getElementById("breakdown");
+    wrap.innerHTML = "";
+    if (!grand) {
+      wrap.innerHTML = '<div class="empty-note">Nothing logged today yet.</div>';
+      return;
+    }
+    Object.keys(FOOD).forEach(function (k) {
+      var pct = grand ? (totals[k] / grand) * 100 : 0;
+      var row = document.createElement("div");
+      row.className = "bd-row";
+      row.innerHTML =
+        '<span>' + FOOD[k].label + '</span>' +
+        '<span class="bd-track"><span class="bd-fill" style="width:' + pct.toFixed(1) + '%; background:' + FOOD[k].color + ';"></span></span>' +
+        '<span class="bd-value num">' + fmt(totals[k], 2) + ' kg</span>';
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------- Swap tip ----------
+  function renderSwapTip() {
+    var todayList = entries.filter(function (e) { return e.date === todayStr(); });
+    var wrap = document.getElementById("swapTip");
+    if (!todayList.length) {
+      wrap.innerHTML = '<p>Log a meal and this will suggest the swap that saves the most carbon.</p>';
+      return;
+    }
+    var worst = todayList.slice().sort(function (a, b) { return b.co2 - a.co2; })[0];
+    var swapTarget = null, swapNote = "";
+    if (worst.category === "meat" && worst.co2 > 0) {
+      var chickenFactor = FOOD.meat.items.chicken.factor;
+      var currentFactorPerKg = worst.co2 / (worst.qty / 1000);
+      if (currentFactorPerKg > chickenFactor) {
+        var savedKg = (currentFactorPerKg - chickenFactor) * (worst.qty / 1000);
+        swapNote = "Swap today's " + worst.label.toLowerCase() + " for chicken and save about <b class=\"num\">" + fmt(savedKg, 2) + "</b> kg CO₂e.";
+      } else {
+        var tofuFactor = FOOD.plant.items.tofu.factor;
+        var savedKg2 = (currentFactorPerKg - tofuFactor) * (worst.qty / 1000);
+        swapNote = "Go plant-based instead of " + worst.label.toLowerCase() + " (try tofu) and save about <b class=\"num\">" + fmt(Math.max(savedKg2, 0), 2) + "</b> kg CO₂e.";
+      }
+    } else if (worst.category === "dairy" && worst.label === "Cheese") {
+      var tofuFactorD = FOOD.plant.items.tofu.factor;
+      var currentFD = worst.co2 / (worst.qty / 1000);
+      var savedD = (currentFD - tofuFactorD) * (worst.qty / 1000);
+      swapNote = "Swap today's cheese for tofu and save about <b class=\"num\">" + fmt(Math.max(savedD, 0), 2) + "</b> kg CO₂e.";
+    } else {
+      swapNote = "Today's highest-impact item was " + worst.label.toLowerCase() + " at <b class=\"num\">" + fmt(worst.co2, 2) + "</b> kg CO₂e — already a fairly light choice.";
+    }
+    wrap.innerHTML = '<p>' + swapNote + '</p><div class="stat-note">Based on your biggest entry today: ' + worst.label + ', ' + fmt(worst.qty, 0) + ' ' + worst.unit + '</div>';
+  }
+
+  // ---------- Log table ----------
+  function renderLog() {
+    var body = document.getElementById("logBody");
+    body.innerHTML = "";
+    document.getElementById("entryCount").textContent = entries.length + (entries.length === 1 ? " entry" : " entries");
+    document.getElementById("footNote").textContent = entries.length ? "Sorted by most recent day" : "";
+
+    if (!entries.length) {
+      body.innerHTML = '<tr><td colspan="4" class="empty-note">Your log is empty. Add your first item above.</td></tr>';
+      return;
+    }
+
+    var byDate = {};
+    entries.forEach(function (e) { (byDate[e.date] = byDate[e.date] || []).push(e); });
+    var dates = Object.keys(byDate).sort(function (a, b) { return a < b ? 1 : -1; });
+
+    dates.forEach(function (date) {
+      var groupRow = document.createElement("tr");
+      groupRow.className = "date-group";
+      var dLabel = new Date(date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+      groupRow.innerHTML = '<td colspan="4">' + dLabel + '</td>';
+      body.appendChild(groupRow);
+
+      byDate[date].forEach(function (e) {
+        var row = document.createElement("tr");
+        row.className = "entry";
+        row.innerHTML =
+          '<td>' + e.label + ' <span class="group-chip" style="background:' + FOOD[e.category].color + '22;color:' + FOOD[e.category].color + ';">' + FOOD[e.category].label.split(" ")[0] + '</span></td>' +
+          '<td class="num">' + e.qty + ' ' + e.unit + '</td>' +
+          '<td class="num" style="text-align:right;">' + fmt(e.co2, 2) + '</td>' +
+          '<td><button class="del-btn" data-id="' + e.id + '">✕</button></td>';
+        body.appendChild(row);
+      });
+    });
+
+    body.querySelectorAll(".del-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        entries = entries.filter(function (e) { return e.id !== btn.dataset.id; });
+        persist();
+        renderAll();
+      });
+    });
+  }
+
+  function renderAll() {
+    renderStats();
+    renderChart();
+    renderBreakdown();
+    renderSwapTip();
+    renderLog();
+  }
+
+  window.addEventListener("resize", renderChart);
+  renderAll();
+})();
+</script>
+
+</body>
+</html>

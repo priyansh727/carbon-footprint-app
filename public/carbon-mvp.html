@@ -1,0 +1,1344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Carbon Footprint — Phase 1 + 2</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+<style>
+  :root {
+    --bg-0: #070a0f;
+    --bg-1: #0d1218;
+    --glass: rgba(255,255,255,0.045);
+    --glass-strong: rgba(255,255,255,0.075);
+    --glass-border: rgba(255,255,255,0.09);
+    --ink: #edf1f6;
+    --muted: #8992a6;
+    --muted-2: #5d6478;
+    --accent: #35d0a6;
+    --accent-ink: #06251c;
+    --scope1: #35d0a6;
+    --scope2: #6c8cff;
+    --scope3: #f2a93c;
+    --danger: #f2555a;
+    --line: rgba(255,255,255,0.09);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 600px at 85% -10%, rgba(108,140,255,0.14), transparent 60%),
+      radial-gradient(700px 500px at -5% 20%, rgba(53,208,166,0.12), transparent 55%),
+      var(--bg-1);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  .num { font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace; font-variant-numeric: tabular-nums; }
+  a { color: inherit; }
+
+  .shell { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: 235px;
+    flex: none;
+    background: rgba(6,9,14,0.55);
+    border-right: 1px solid var(--line);
+    padding: 1.3rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .brand { display: flex; flex-direction: column; gap: 0.15rem; padding: 0 0.4rem; }
+  .brand-mark { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--scope1), var(--scope2)); margin-bottom: 0.5rem; }
+  .brand-name { font-weight: 700; font-size: 1.02rem; letter-spacing: -0.01em; }
+  .brand-sub { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  nav.navlist { display: flex; flex-direction: column; gap: 0.15rem; }
+  .navgroup-label { font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-2); margin: 0.9rem 0.6rem 0.35rem; }
+  .navitem {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.55rem 0.65rem; border-radius: 8px; font-size: 0.86rem;
+    color: var(--muted); cursor: pointer; border: 1px solid transparent; background: none;
+    width: 100%; text-align: left; font-family: inherit;
+  }
+  .navitem:hover { background: var(--glass); color: var(--ink); }
+  .navitem.active { background: var(--glass-strong); color: var(--ink); border-color: var(--glass-border); }
+  .navitem.locked { cursor: not-allowed; opacity: 0.55; }
+  .navitem.locked:hover { background: none; color: var(--muted); }
+  .lock-tag { font-size: 0.6rem; letter-spacing: 0.04em; background: rgba(242,169,60,0.14); color: var(--scope3); padding: 0.1rem 0.4rem; border-radius: 999px; }
+
+  .sidebar-foot { margin-top: auto; font-size: 0.72rem; color: var(--muted-2); padding: 0 0.4rem; }
+  .sidebar-foot a { color: var(--scope1); text-decoration: none; }
+  .sidebar-foot a:hover { text-decoration: underline; }
+
+  /* ---------- Main ---------- */
+  .main { flex: 1; min-width: 0; padding: 1.3rem 2rem 4rem; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+  }
+  .topbar h1 { font-size: 1.15rem; margin: 0; font-weight: 700; }
+  .topbar-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  select, input[type="text"], input[type="number"], input[type="date"] {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+    font-family: inherit;
+  }
+  select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input[type="file"] { color: var(--muted); font-size: 0.8rem; }
+  input[type="file"]::file-selector-button {
+    background: var(--glass-strong); color: var(--ink); border: 1px solid var(--glass-border);
+    border-radius: 6px; padding: 0.45rem 0.75rem; margin-right: 0.7rem; cursor: pointer; font-family: inherit;
+  }
+  .role-banner {
+    display: none;
+    background: rgba(242,169,60,0.1);
+    border: 1px solid rgba(242,169,60,0.3);
+    color: var(--scope3);
+    font-size: 0.8rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    margin-bottom: 1.2rem;
+  }
+  .role-banner.show { display: block; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ---------- Glass panel ---------- */
+  .panel {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 1.3rem 1.4rem;
+    backdrop-filter: blur(14px);
+  }
+  .panel + .panel { margin-top: 1.2rem; }
+  .panel-title {
+    font-size: 0.72rem; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; margin: 0 0 1rem;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;
+  }
+  .panel-title .src { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 0.72rem; color: var(--muted-2); }
+  .panel-note { font-size: 0.83rem; color: var(--muted); margin: -0.5rem 0 1rem; }
+
+  /* ---------- Stat grid ---------- */
+  .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.2rem; }
+  @media (max-width: 1100px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card {
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 14px;
+    padding: 1rem 1.15rem; backdrop-filter: blur(14px);
+  }
+  .stat-card .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.4rem; }
+  .stat-label { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; display: flex; align-items: center; }
+  .stat-value { font-size: 1.5rem; font-weight: 700; }
+  .stat-value small { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
+  .stat-note { font-size: 0.72rem; color: var(--muted-2); margin-top: 0.3rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.2rem; align-items: start; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  canvas { width: 100%; display: block; }
+
+  /* ---------- Breakdown bars ---------- */
+  .bd-row { display: grid; grid-template-columns: 7.5rem 1fr 5rem; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; font-size: 0.82rem; }
+  .bd-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
+  .bd-fill { height: 100%; border-radius: 999px; }
+  .bd-value { text-align: right; color: var(--muted); }
+
+  /* ---------- Forms ---------- */
+  .field-row { display: flex; gap: 0.75rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 0.3rem; }
+  .field label { font-size: 0.66rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .field select, .field input { width: 100%; }
+  button.primary {
+    background: var(--accent); color: var(--accent-ink); border: none; border-radius: 8px;
+    padding: 0.6rem 1.1rem; font-size: 0.86rem; font-weight: 700; cursor: pointer;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.ghost {
+    background: none; border: 1px solid var(--glass-border); color: var(--ink);
+    border-radius: 8px; padding: 0.45rem 0.8rem; font-size: 0.78rem; cursor: pointer;
+  }
+  button.ghost:hover { border-color: var(--accent); }
+  button.ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.ghost + button.ghost { margin-left: 0.5rem; }
+  .preview-line { font-size: 0.83rem; color: var(--muted); margin-bottom: 0.9rem; }
+  .preview-line b { color: var(--ink); font-size: 1rem; }
+
+  /* ---------- Tables ---------- */
+  .tbl-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; min-width: 520px; }
+  thead th {
+    text-align: left; font-size: 0.64rem; letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; padding: 0 0.5rem 0.5rem; border-bottom: 1px solid var(--line);
+  }
+  tbody td { padding: 0.5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .scope-chip { font-size: 0.66rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 700; }
+  .row-note { font-size: 0.7rem; color: var(--muted-2); margin-top: 0.15rem; }
+  .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
+  .del-btn:hover { color: var(--danger); }
+  .del-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .empty-note { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; text-align: center; }
+
+  /* ---------- Status chips ---------- */
+  .status-chip { font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 700; display: inline-block; }
+  .status-chip.not_sent { background: rgba(137,146,166,0.15); color: var(--muted); }
+  .status-chip.sent { background: rgba(108,140,255,0.15); color: var(--scope2); }
+  .status-chip.submitted { background: rgba(53,208,166,0.15); color: var(--scope1); }
+
+  /* ---------- Org / facilities ---------- */
+  .facility-row { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
+  .facility-row:last-child { border-bottom: none; }
+  .facility-meta { color: var(--muted); font-size: 0.76rem; }
+
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Carbon Footprint</div>
+      <div class="brand-sub">Phase 1 + 2 · Live</div>
+    </div>
+
+    <nav class="navlist">
+      <div class="navgroup-label">Workspace</div>
+      <button class="navitem active" data-view="overview">Overview</button>
+      <button class="navitem" data-view="entry">Data Entry</button>
+      <button class="navitem" data-view="suppliers">Suppliers</button>
+      <button class="navitem" data-view="import">Data Import</button>
+      <button class="navitem" data-view="org">Organisation &amp; Sites</button>
+      <button class="navitem" data-view="factors">Emission Factors</button>
+      <button class="navitem" data-view="reports">Reports</button>
+
+      <div class="navgroup-label">Coming Later</div>
+      <button class="navitem locked" data-locked="true">AI Assistant &amp; OCR <span class="lock-tag">Phase 3</span></button>
+      <button class="navitem locked" data-locked="true">Product Footprint (ISO 14067) <span class="lock-tag">Phase 3</span></button>
+    </nav>
+
+    <div class="sidebar-foot">
+      Built from the internal research report.<br />
+      <a href="carbon-report.html" id="reportLink" target="_blank" rel="noopener">View full report ↗</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1 id="viewTitle">Overview</h1>
+      <div class="topbar-controls">
+        <select id="facilityFilter"></select>
+        <select id="scope2Method">
+          <option value="location">Scope 2 — Location-based</option>
+          <option value="market">Scope 2 — Market-based</option>
+        </select>
+        <select id="roleSelect">
+          <option value="lead">Role: Sustainability Lead</option>
+          <option value="entry">Role: Data Entry</option>
+          <option value="auditor">Role: Auditor</option>
+          <option value="viewer">Role: Viewer</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="role-banner" id="roleBanner">Viewer role is read-only — entry, import and deletion controls are disabled. Reports can still be viewed and downloaded.</div>
+
+    <!-- OVERVIEW -->
+    <section class="view active" id="view-overview">
+      <div class="stat-grid" id="statGrid"></div>
+      <div class="grid-2">
+        <div class="panel">
+          <p class="panel-title">Monthly Trend <span class="src">kg CO₂e, all facilities</span></p>
+          <canvas id="trendChart" height="150"></canvas>
+        </div>
+        <div class="panel">
+          <p class="panel-title">By Site</p>
+          <div id="siteBreakdown"></div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top: 1.2rem;">
+        <div class="panel">
+          <p class="panel-title">Scope 3 by Category</p>
+          <div id="scope3Breakdown"></div>
+        </div>
+        <div class="panel">
+          <p class="panel-title">Year-on-Year <span class="src">location-based, all sites</span></p>
+          <div id="yoyPanel"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="panel-title">Audit Log <span class="src">every change, timestamped</span></p>
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Time</th><th>Actor</th><th>Action</th></tr></thead>
+            <tbody id="auditBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- DATA ENTRY -->
+    <section class="view" id="view-entry">
+      <div class="grid-2">
+        <div class="panel">
+          <p class="panel-title">New Activity Entry</p>
+          <div class="field-row">
+            <div class="field">
+              <label for="eCategory">Category</label>
+              <select id="eCategory"></select>
+            </div>
+            <div class="field">
+              <label for="eSubtype">Type</label>
+              <select id="eSubtype"></select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field" style="flex: 0 0 7rem;">
+              <label for="eQty">Quantity</label>
+              <input type="number" id="eQty" min="0" step="0.1" value="1" />
+            </div>
+            <div class="field" style="flex: 0 0 5rem;">
+              <label>Unit</label>
+              <input type="text" id="eUnit" disabled />
+            </div>
+            <div class="field">
+              <label for="eFacility">Facility</label>
+              <select id="eFacility"></select>
+            </div>
+            <div class="field" style="flex: 0 0 9rem;">
+              <label for="eDate">Date</label>
+              <input type="date" id="eDate" />
+            </div>
+          </div>
+          <div class="field-row" id="renewableRow" style="display:none;">
+            <div class="field">
+              <label for="eRenew">Renewable / REC coverage (%)</label>
+              <input type="number" id="eRenew" min="0" max="100" step="1" value="0" />
+            </div>
+          </div>
+          <div class="field-row" id="commuteRow" style="display:none;">
+            <div class="field" style="flex: 0 0 6.5rem;"><label for="cEmployees">Employees</label><input type="number" id="cEmployees" min="0" step="1" value="10" /></div>
+            <div class="field" style="flex: 0 0 8rem;"><label for="cDistance">One-way km</label><input type="number" id="cDistance" min="0" step="0.5" value="12" /></div>
+            <div class="field" style="flex: 0 0 6rem;"><label for="cDays">Days</label><input type="number" id="cDays" min="0" step="1" value="20" /></div>
+            <div class="field"><label>&nbsp;</label><button type="button" class="ghost" id="calcCommuteBtn">Use calculated km</button></div>
+          </div>
+          <p class="preview-line">≈ <b class="num" id="ePreview">0.0</b> kg CO₂e · <span id="eScopeLabel" class="num">Scope 1</span></p>
+          <button class="primary" id="addEntryBtn">Add entry</button>
+        </div>
+
+        <div class="panel">
+          <p class="panel-title">Recent Entries <span class="src" id="entryCount">0 total</span></p>
+          <div class="tbl-scroll">
+            <table>
+              <thead><tr><th>Date</th><th>Activity</th><th>Site</th><th style="text-align:right;">kg CO₂e</th><th></th></tr></thead>
+              <tbody id="entryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUPPLIERS -->
+    <section class="view" id="view-suppliers">
+      <div class="panel">
+        <p class="panel-title">Supplier Questionnaire Portal <span class="src">Scope 3 · Category 1 — Purchased Goods &amp; Services</span></p>
+        <p class="panel-note">Simulated workflow — no real email is sent from this prototype. "Send" and "Simulate response" stand in for what a live supplier portal would do.</p>
+        <div class="field-row">
+          <div class="field"><label for="sName">Supplier name</label><input type="text" id="sName" placeholder="e.g. Anand Packaging Pvt Ltd" /></div>
+          <div class="field"><label for="sCategory">Spend category</label><select id="sCategory"></select></div>
+          <div class="field"><label for="sEmail">Contact email</label><input type="text" id="sEmail" placeholder="name@supplier.com" /></div>
+        </div>
+        <button class="ghost" id="addSupplierBtn">Add supplier</button>
+        <div class="tbl-scroll" style="margin-top: 1.2rem;">
+          <table>
+            <thead><tr><th>Supplier</th><th>Category</th><th>Status</th><th></th></tr></thead>
+            <tbody id="supplierBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- DATA IMPORT -->
+    <section class="view" id="view-import">
+      <div class="panel">
+        <p class="panel-title">CSV Bulk Upload <span class="src">columns: date, facility, category, type, quantity</span></p>
+        <p class="panel-note">Column-mapping wizard — map your file's headers to the fields the engine needs, preview a few rows, then import.</p>
+        <input type="file" id="csvFile" accept=".csv" />
+        <button class="ghost" id="downloadTemplateBtn">Download sample template</button>
+        <div id="csvPreviewWrap" style="display:none; margin-top:1.1rem;">
+          <div class="tbl-scroll">
+            <table id="csvPreviewTable"><thead></thead><tbody></tbody></table>
+          </div>
+          <div class="field-row" id="csvMappingRow" style="margin-top: 1rem;"></div>
+          <button class="primary" id="importCsvBtn">Import rows</button>
+          <p class="panel-note" id="csvImportSummary" style="margin-top: 0.8rem;"></p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">SystemETA ERP Connector <span class="src">simulated demo sync</span></p>
+        <p class="panel-note">Pulls invoices, fuel receipts and travel itineraries from SystemETA into activity data. No live ERP is connected in this prototype — sync generates realistic demo entries so the end-to-end workflow can be reviewed.</p>
+        <button class="ghost" id="syncErpBtn">Sync invoices from SystemETA (demo)</button>
+        <p class="panel-note" id="erpSyncSummary" style="margin-top: 0.8rem;"></p>
+      </div>
+    </section>
+
+    <!-- ORG -->
+    <section class="view" id="view-org">
+      <div class="grid-2">
+        <div class="panel">
+          <p class="panel-title">Organisation &amp; Boundary</p>
+          <div class="field-row">
+            <div class="field"><label for="oName">Organisation name</label><input type="text" id="oName" /></div>
+            <div class="field" style="flex: 0 0 7rem;"><label for="oYear">Reporting year</label><input type="number" id="oYear" /></div>
+            <div class="field" style="flex: 0 0 7rem;"><label for="oBaseYear">Base year</label><input type="number" id="oBaseYear" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="oEmployees">Employees</label><input type="number" id="oEmployees" min="1" /></div>
+            <div class="field"><label for="oRevenue">Revenue (₹ crore)</label><input type="number" id="oRevenue" min="0" step="0.1" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="oGridFactor">Grid factor — location-based (kg CO₂e/kWh)</label><input type="number" id="oGridFactor" step="0.001" /></div>
+            <div class="field"><label for="oMarketFactor">Residual/supplier factor — market-based (kg CO₂e/kWh)</label><input type="number" id="oMarketFactor" step="0.001" /></div>
+          </div>
+          <p class="stat-note">Defaults: CEA India grid factor 0.716 kg CO₂e/kWh (location-based). Consolidation approach: operational control.</p>
+          <button class="ghost" id="saveOrgBtn">Save</button>
+        </div>
+
+        <div class="panel">
+          <p class="panel-title">Sites / Facilities</p>
+          <div id="facilityList"></div>
+          <div class="field-row" style="margin-top: 0.9rem;">
+            <div class="field"><label for="fName">Facility name</label><input type="text" id="fName" placeholder="e.g. Pune Plant" /></div>
+            <div class="field"><label for="fCity">City</label><input type="text" id="fCity" placeholder="e.g. Pune" /></div>
+          </div>
+          <button class="ghost" id="addFacilityBtn">Add facility</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- FACTORS -->
+    <section class="view" id="view-factors">
+      <div class="panel">
+        <p class="panel-title">Emission Factors Library <span class="src">curated: DEFRA · CEA India · IPCC · internal</span></p>
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Category</th><th>Activity</th><th>Factor</th><th>Unit</th><th>Source</th></tr></thead>
+            <tbody id="factorBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section class="view" id="view-reports">
+      <div class="panel">
+        <p class="panel-title">BRSR Core</p>
+        <p class="panel-note">Scope 1 &amp; 2 emissions and intensity metrics, formatted for BRSR Core disclosure.</p>
+        <button class="ghost" data-report="brsrcore">Download BRSR Core export</button>
+      </div>
+      <div class="panel">
+        <p class="panel-title">GHG Protocol Corporate Report</p>
+        <p class="panel-note">Full Scope 1, 2 &amp; 3 breakdown with organisational boundary and base year, per the GHG Protocol Corporate Standard.</p>
+        <button class="ghost" data-report="ghg">Download GHG Protocol export</button>
+      </div>
+      <div class="panel">
+        <p class="panel-title">Evidence Pack <span class="src">attached to every export</span></p>
+        <div id="evidenceSummary" style="font-size: 0.88rem; color: var(--muted);"></div>
+        <p class="stat-note" style="margin-top: 0.9rem;">CDP, GRI and CSRD templates are planned for a later release once BRSR and GHG Protocol exports are validated with the sustainability team.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE_KEY = "carbon-mvp-v2";
+
+  var FACTORS = {
+    combustion: { label: "Stationary & Mobile Combustion", scope: 1, items: {
+      diesel:  { label: "Diesel", factor: 2.68, unit: "L", source: "DEFRA 2024" },
+      petrol:  { label: "Petrol", factor: 2.31, unit: "L", source: "DEFRA 2024" },
+      lpg:     { label: "LPG", factor: 2.983, unit: "kg", source: "DEFRA 2024" },
+      cng:     { label: "CNG", factor: 2.53, unit: "kg", source: "DEFRA 2024" },
+      natgas:  { label: "Natural gas", factor: 0.203, unit: "kWh", source: "DEFRA 2024" },
+      coal:    { label: "Coal", factor: 2.42, unit: "kg", source: "IPCC" }
+    }},
+    refrigerant: { label: "Refrigerant Leakage", scope: 1, items: {
+      r410a: { label: "R-410A leak", factor: 2088, unit: "kg", source: "AR5 GWP" },
+      r22:   { label: "R-22 leak", factor: 1810, unit: "kg", source: "AR5 GWP" },
+      r134a: { label: "R-134a leak", factor: 1430, unit: "kg", source: "AR5 GWP" }
+    }},
+    electricity: { label: "Purchased Electricity", scope: 2, items: {
+      grid: { label: "Grid electricity", factor: null, unit: "kWh", source: "CEA India" }
+    }},
+    travel: { label: "Business Travel", scope: 3, items: {
+      flight_domestic: { label: "Flight, domestic (economy)", factor: 0.156, unit: "passenger-km", source: "DEFRA 2024" },
+      flight_intl:     { label: "Flight, international", factor: 0.148, unit: "passenger-km", source: "DEFRA 2024" },
+      car:             { label: "Company car (petrol)", factor: 0.192, unit: "km", source: "DEFRA 2024" },
+      rail:            { label: "Rail", factor: 0.041, unit: "km", source: "DEFRA 2024" },
+      hotel:           { label: "Hotel night", factor: 20, unit: "room-night", source: "Internal estimate" }
+    }},
+    goods: { label: "Purchased Goods & Services", scope: 3, items: {
+      general:       { label: "General goods & services", factor: 0.45, unit: "₹ thousand", source: "EEIO avg (internal)" },
+      it_equipment:  { label: "IT equipment & electronics", factor: 0.85, unit: "₹ thousand", source: "EEIO avg (internal)" },
+      packaging:     { label: "Packaging materials", factor: 0.60, unit: "₹ thousand", source: "EEIO avg (internal)" },
+      raw_materials: { label: "Raw materials", factor: 0.70, unit: "₹ thousand", source: "EEIO avg (internal)" }
+    }},
+    commute: { label: "Employee Commute", scope: 3, items: {
+      car:        { label: "Car (drive alone)", factor: 0.192, unit: "passenger-km", source: "DEFRA 2024" },
+      carpool:    { label: "Car (carpool)", factor: 0.096, unit: "passenger-km", source: "Internal estimate" },
+      twowheeler: { label: "Two-wheeler", factor: 0.113, unit: "passenger-km", source: "DEFRA 2024" },
+      bus:        { label: "Bus", factor: 0.105, unit: "passenger-km", source: "DEFRA 2024" },
+      train:      { label: "Train / metro", factor: 0.041, unit: "passenger-km", source: "DEFRA 2024" },
+      active:     { label: "Walk / cycle", factor: 0, unit: "passenger-km", source: "n/a" }
+    }}
+  };
+
+  var SCOPE_COLOR = { 1: "var(--scope1)", 2: "var(--scope2)", 3: "var(--scope3)" };
+
+  var defaultState = {
+    org: { name: "SystemETA Customer Co.", year: new Date().getFullYear(), baseYear: new Date().getFullYear(), employees: 250, revenueCr: 40, gridFactor: 0.716, marketFactor: 0.716 },
+    facilities: [
+      { id: "f1", name: "Head Office", city: "Mumbai" },
+      { id: "f2", name: "Pune Plant", city: "Pune" }
+    ],
+    entries: [],
+    suppliers: [],
+    audit: []
+  };
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return JSON.parse(JSON.stringify(defaultState));
+      var parsed = JSON.parse(raw);
+      parsed.org = parsed.org || defaultState.org;
+      if (parsed.org.baseYear === undefined) parsed.org.baseYear = parsed.org.year;
+      parsed.facilities = parsed.facilities && parsed.facilities.length ? parsed.facilities : defaultState.facilities;
+      parsed.entries = parsed.entries || [];
+      parsed.suppliers = parsed.suppliers || [];
+      parsed.audit = parsed.audit || [];
+      return parsed;
+    } catch (e) { return JSON.parse(JSON.stringify(defaultState)); }
+  }
+  var state = load();
+  function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+  function fmt(n, d) { d = d === undefined ? 1 : d; return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  function nowTime() { return new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); }
+  function roleLabel(r) { return { lead: "Sustainability Lead", entry: "Data Entry", auditor: "Auditor", viewer: "Viewer" }[r]; }
+  function uid() { return Date.now() + Math.random().toString(16).slice(2); }
+
+  function logAudit(action) {
+    state.audit.unshift({ ts: nowTime(), actor: roleLabel(currentRole()), action: action });
+    state.audit = state.audit.slice(0, 40);
+  }
+
+  // ---------- Role handling ----------
+  var roleSelect = document.getElementById("roleSelect");
+  function currentRole() { return roleSelect.value; }
+  function applyRoleGate() {
+    var isViewer = currentRole() === "viewer";
+    document.getElementById("roleBanner").classList.toggle("show", isViewer);
+    ["addEntryBtn", "addFacilityBtn", "saveOrgBtn", "addSupplierBtn", "importCsvBtn", "syncErpBtn"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.disabled = isViewer;
+    });
+    document.querySelectorAll(".del-btn, .sup-action").forEach(function (b) { b.disabled = isViewer; });
+  }
+  roleSelect.addEventListener("change", applyRoleGate);
+
+  // ---------- Navigation ----------
+  var navItems = document.querySelectorAll(".navitem");
+  navItems.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (btn.dataset.locked) return;
+      navItems.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+      document.getElementById("view-" + btn.dataset.view).classList.add("active");
+      document.getElementById("viewTitle").textContent = btn.textContent.trim();
+    });
+  });
+
+  // ---------- Facility selects ----------
+  function facilityOptionsHtml(includeAll) {
+    var html = includeAll ? '<option value="all">All facilities</option>' : "";
+    state.facilities.forEach(function (f) {
+      html += '<option value="' + f.id + '">' + f.name + '</option>';
+    });
+    return html;
+  }
+  function refreshFacilitySelects() {
+    var filterVal = document.getElementById("facilityFilter").value || "all";
+    document.getElementById("facilityFilter").innerHTML = facilityOptionsHtml(true);
+    if ([].slice.call(document.getElementById("facilityFilter").options).some(function (o) { return o.value === filterVal; })) {
+      document.getElementById("facilityFilter").value = filterVal;
+    }
+    document.getElementById("eFacility").innerHTML = facilityOptionsHtml(false);
+  }
+
+  // ---------- Entry form ----------
+  var eCategory = document.getElementById("eCategory");
+  var eSubtype = document.getElementById("eSubtype");
+  var eQty = document.getElementById("eQty");
+  var eUnit = document.getElementById("eUnit");
+  var eDate = document.getElementById("eDate");
+  var eRenew = document.getElementById("eRenew");
+  var ePreview = document.getElementById("ePreview");
+  var eScopeLabel = document.getElementById("eScopeLabel");
+
+  Object.keys(FACTORS).forEach(function (catKey) {
+    var opt = document.createElement("option");
+    opt.value = catKey;
+    opt.textContent = FACTORS[catKey].label;
+    eCategory.appendChild(opt);
+  });
+
+  function currentCat() { return FACTORS[eCategory.value]; }
+  function currentItem() { return currentCat().items[eSubtype.value]; }
+
+  function populateSubtypes() {
+    var cat = currentCat();
+    eSubtype.innerHTML = "";
+    Object.keys(cat.items).forEach(function (k) {
+      var opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = cat.items[k].label;
+      eSubtype.appendChild(opt);
+    });
+    document.getElementById("renewableRow").style.display = eCategory.value === "electricity" ? "flex" : "none";
+    document.getElementById("commuteRow").style.display = eCategory.value === "commute" ? "flex" : "none";
+    updateUnit();
+  }
+  function updateUnit() {
+    eUnit.value = currentItem().unit;
+    eScopeLabel.textContent = "Scope " + currentCat().scope;
+    updatePreview();
+  }
+  function activeElectricityFactor() {
+    return document.getElementById("scope2Method").value === "market" ? state.org.marketFactor : state.org.gridFactor;
+  }
+  function updatePreview() {
+    var qty = parseFloat(eQty.value) || 0;
+    var factor = eCategory.value === "electricity" ? activeElectricityFactor() : currentItem().factor;
+    var co2 = factor * qty;
+    if (eCategory.value === "electricity" && document.getElementById("scope2Method").value === "market") {
+      var renew = (parseFloat(eRenew.value) || 0) / 100;
+      co2 = co2 * (1 - renew);
+    }
+    ePreview.textContent = fmt(co2, 1);
+  }
+
+  eCategory.addEventListener("change", populateSubtypes);
+  eSubtype.addEventListener("change", updateUnit);
+  eQty.addEventListener("input", updatePreview);
+  eRenew.addEventListener("input", updatePreview);
+  document.getElementById("scope2Method").addEventListener("change", function () { updatePreview(); renderAll(); });
+  document.getElementById("calcCommuteBtn").addEventListener("click", function () {
+    var emp = parseFloat(document.getElementById("cEmployees").value) || 0;
+    var dist = parseFloat(document.getElementById("cDistance").value) || 0;
+    var days = parseFloat(document.getElementById("cDays").value) || 0;
+    eQty.value = Math.round(emp * dist * 2 * days * 10) / 10;
+    updatePreview();
+  });
+  eDate.value = todayStr();
+  populateSubtypes();
+
+  function makeEntry(opts) {
+    var cat = FACTORS[opts.category];
+    var item = cat.items[opts.subtype];
+    var locationFactor = opts.category === "electricity" ? state.org.gridFactor : item.factor;
+    var marketFactor = opts.category === "electricity" ? state.org.marketFactor : item.factor;
+    var renew = opts.renewPct || 0;
+    return {
+      id: uid(),
+      facilityId: opts.facilityId,
+      category: opts.category,
+      subtype: opts.subtype,
+      label: item.label,
+      qty: opts.qty,
+      unit: item.unit,
+      scope: cat.scope,
+      co2Location: locationFactor * opts.qty,
+      co2Market: marketFactor * opts.qty * (1 - renew),
+      date: opts.date || todayStr(),
+      note: opts.note || ""
+    };
+  }
+
+  document.getElementById("addEntryBtn").addEventListener("click", function () {
+    if (currentRole() === "viewer") return;
+    var qty = parseFloat(eQty.value);
+    if (!qty || qty <= 0) { eQty.focus(); return; }
+    var renewPct = eCategory.value === "electricity" ? (parseFloat(eRenew.value) || 0) / 100 : 0;
+    var entry = makeEntry({
+      category: eCategory.value,
+      subtype: eSubtype.value,
+      qty: qty,
+      facilityId: document.getElementById("eFacility").value,
+      date: eDate.value,
+      renewPct: renewPct
+    });
+    state.entries.push(entry);
+    logAudit("Added entry — " + entry.label + " (" + qty + " " + entry.unit + ")");
+    persist();
+    eQty.value = 1;
+    eRenew.value = 0;
+    updatePreview();
+    renderAll();
+  });
+
+  // ---------- Org form ----------
+  function loadOrgForm() {
+    document.getElementById("oName").value = state.org.name;
+    document.getElementById("oYear").value = state.org.year;
+    document.getElementById("oBaseYear").value = state.org.baseYear;
+    document.getElementById("oEmployees").value = state.org.employees;
+    document.getElementById("oRevenue").value = state.org.revenueCr;
+    document.getElementById("oGridFactor").value = state.org.gridFactor;
+    document.getElementById("oMarketFactor").value = state.org.marketFactor;
+  }
+  document.getElementById("saveOrgBtn").addEventListener("click", function () {
+    if (currentRole() === "viewer") return;
+    state.org.name = document.getElementById("oName").value || state.org.name;
+    state.org.year = parseInt(document.getElementById("oYear").value, 10) || state.org.year;
+    state.org.baseYear = parseInt(document.getElementById("oBaseYear").value, 10) || state.org.baseYear;
+    state.org.employees = parseFloat(document.getElementById("oEmployees").value) || state.org.employees;
+    state.org.revenueCr = parseFloat(document.getElementById("oRevenue").value) || state.org.revenueCr;
+    state.org.gridFactor = parseFloat(document.getElementById("oGridFactor").value) || state.org.gridFactor;
+    state.org.marketFactor = parseFloat(document.getElementById("oMarketFactor").value) || state.org.marketFactor;
+    logAudit("Updated organisation & boundary settings");
+    persist();
+    renderAll();
+  });
+
+  document.getElementById("addFacilityBtn").addEventListener("click", function () {
+    if (currentRole() === "viewer") return;
+    var name = document.getElementById("fName").value.trim();
+    var city = document.getElementById("fCity").value.trim();
+    if (!name) return;
+    state.facilities.push({ id: "f" + uid(), name: name, city: city || "—" });
+    logAudit("Added facility — " + name);
+    document.getElementById("fName").value = "";
+    document.getElementById("fCity").value = "";
+    persist();
+    refreshFacilitySelects();
+    renderFacilityList();
+    renderAll();
+  });
+
+  function renderFacilityList() {
+    var wrap = document.getElementById("facilityList");
+    wrap.innerHTML = "";
+    state.facilities.forEach(function (f) {
+      var row = document.createElement("div");
+      row.className = "facility-row";
+      row.innerHTML = '<span>' + f.name + '</span><span class="facility-meta">' + f.city + '</span>';
+      wrap.appendChild(row);
+    });
+  }
+
+  function findFacilityByName(name) {
+    var n = (name || "").trim().toLowerCase();
+    return state.facilities.filter(function (f) { return f.name.toLowerCase() === n; })[0];
+  }
+
+  // ---------- Suppliers ----------
+  var sCategory = document.getElementById("sCategory");
+  Object.keys(FACTORS.goods.items).forEach(function (k) {
+    var opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = FACTORS.goods.items[k].label;
+    sCategory.appendChild(opt);
+  });
+
+  document.getElementById("addSupplierBtn").addEventListener("click", function () {
+    if (currentRole() === "viewer") return;
+    var name = document.getElementById("sName").value.trim();
+    if (!name) return;
+    state.suppliers.push({
+      id: uid(), name: name, category: sCategory.value,
+      email: document.getElementById("sEmail").value.trim(), status: "not_sent"
+    });
+    logAudit("Added supplier — " + name);
+    document.getElementById("sName").value = "";
+    document.getElementById("sEmail").value = "";
+    persist();
+    renderAll();
+  });
+
+  function renderSuppliers() {
+    var body = document.getElementById("supplierBody");
+    body.innerHTML = "";
+    if (!state.suppliers.length) {
+      body.innerHTML = '<tr><td colspan="4" class="empty-note">No suppliers yet — add one above to start the questionnaire workflow.</td></tr>';
+      return;
+    }
+    state.suppliers.forEach(function (s) {
+      var catLabel = FACTORS.goods.items[s.category] ? FACTORS.goods.items[s.category].label : s.category;
+      var tr = document.createElement("tr");
+      var actionHtml = "";
+      if (s.status === "not_sent") {
+        actionHtml = '<button class="ghost sup-action" data-action="send" data-id="' + s.id + '">Send questionnaire</button>';
+      } else if (s.status === "sent") {
+        actionHtml = '<button class="ghost sup-action" data-action="respond" data-id="' + s.id + '">Simulate response</button>';
+      } else {
+        actionHtml = '<span class="stat-note">' + fmt(s.amount, 1) + ' ₹k logged</span>';
+      }
+      tr.innerHTML =
+        '<td>' + s.name + (s.email ? '<div class="row-note">' + s.email + '</div>' : '') + '</td>' +
+        '<td>' + catLabel + '</td>' +
+        '<td><span class="status-chip ' + s.status + '">' + s.status.replace("_", " ") + '</span></td>' +
+        '<td style="white-space:nowrap;">' + actionHtml + ' <button class="del-btn sup-action" data-action="delete" data-id="' + s.id + '">✕</button></td>';
+      body.appendChild(tr);
+    });
+    body.querySelectorAll(".sup-action").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (currentRole() === "viewer") return;
+        var id = btn.dataset.id;
+        var supplier = state.suppliers.filter(function (s) { return s.id === id; })[0];
+        if (!supplier) return;
+        if (btn.dataset.action === "delete") {
+          state.suppliers = state.suppliers.filter(function (s) { return s.id !== id; });
+          logAudit("Removed supplier — " + supplier.name);
+        } else if (btn.dataset.action === "send") {
+          supplier.status = "sent";
+          logAudit("Sent questionnaire to " + supplier.name + " (simulated)");
+        } else if (btn.dataset.action === "respond") {
+          var amount = Math.round((50 + Math.random() * 450) * 10) / 10;
+          supplier.status = "submitted";
+          supplier.amount = amount;
+          var facility = state.facilities[0];
+          var entry = makeEntry({ category: "goods", subtype: supplier.category, qty: amount, facilityId: facility.id, note: "Supplier: " + supplier.name });
+          state.entries.push(entry);
+          logAudit("Received questionnaire response from " + supplier.name + " — " + amount + " ₹k logged");
+        }
+        persist();
+        renderAll();
+      });
+    });
+  }
+
+  // ---------- CSV import ----------
+  var csvRows = null;
+  var TARGET_FIELDS = ["date", "facility", "category", "type", "quantity"];
+
+  function parseCsv(text) {
+    return text.split(/\r\n|\n/).filter(function (l) { return l.trim().length; }).map(function (line) {
+      var result = [], cur = "", inQuotes = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (ch === '"') { inQuotes = !inQuotes; continue; }
+        if (ch === "," && !inQuotes) { result.push(cur); cur = ""; continue; }
+        cur += ch;
+      }
+      result.push(cur);
+      return result.map(function (s) { return s.trim(); });
+    });
+  }
+
+  document.getElementById("csvFile").addEventListener("change", function (ev) {
+    var file = ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      csvRows = parseCsv(String(e.target.result));
+      renderCsvPreview();
+    };
+    reader.readAsText(file);
+  });
+
+  function renderCsvPreview() {
+    if (!csvRows || !csvRows.length) return;
+    document.getElementById("csvPreviewWrap").style.display = "block";
+    var headers = csvRows[0];
+    var thead = document.querySelector("#csvPreviewTable thead");
+    var tbody = document.querySelector("#csvPreviewTable tbody");
+    thead.innerHTML = "<tr>" + headers.map(function (h) { return "<th>" + h + "</th>"; }).join("") + "</tr>";
+    tbody.innerHTML = csvRows.slice(1, 6).map(function (row) {
+      return "<tr>" + row.map(function (c) { return "<td>" + c + "</td>"; }).join("") + "</tr>";
+    }).join("");
+
+    var mapWrap = document.getElementById("csvMappingRow");
+    mapWrap.innerHTML = "";
+    TARGET_FIELDS.forEach(function (field) {
+      var guess = headers.findIndex(function (h) { return h.toLowerCase().indexOf(field) >= 0; });
+      var div = document.createElement("div");
+      div.className = "field";
+      var opts = headers.map(function (h, i) { return '<option value="' + i + '"' + (i === guess ? " selected" : "") + '>' + h + '</option>'; }).join("");
+      div.innerHTML = '<label>' + field + '</label><select class="csv-map" data-field="' + field + '">' + opts + '</select>';
+      mapWrap.appendChild(div);
+    });
+  }
+
+  document.getElementById("downloadTemplateBtn").addEventListener("click", function () {
+    var csv = 'date,facility,category,type,quantity\n' +
+      '2026-07-01,Head Office,Stationary & Mobile Combustion,Diesel,120\n' +
+      '2026-07-02,Pune Plant,Purchased Electricity,Grid electricity,4500\n' +
+      '2026-07-03,Head Office,Business Travel,"Flight, domestic (economy)",350\n';
+    downloadBlob(csv, "text/csv", "carbon-import-template.csv");
+  });
+
+  document.getElementById("importCsvBtn").addEventListener("click", function () {
+    if (currentRole() === "viewer" || !csvRows) return;
+    var mapping = {};
+    document.querySelectorAll(".csv-map").forEach(function (sel) { mapping[sel.dataset.field] = parseInt(sel.value, 10); });
+
+    var imported = 0, errors = [];
+    csvRows.slice(1).forEach(function (row, idx) {
+      var dateRaw = row[mapping.date];
+      var parsedDate = new Date(dateRaw);
+      var dateVal = isNaN(parsedDate.getTime()) ? todayStr() : parsedDate.toISOString().slice(0, 10);
+
+      var facName = row[mapping.facility];
+      var facility = findFacilityByName(facName);
+      if (!facility) {
+        facility = { id: "f" + uid(), name: facName || "Imported Site", city: "—" };
+        state.facilities.push(facility);
+      }
+
+      var catRaw = (row[mapping.category] || "").toLowerCase();
+      var catKey = Object.keys(FACTORS).filter(function (k) {
+        return FACTORS[k].label.toLowerCase().indexOf(catRaw) >= 0 || catRaw.indexOf(k) >= 0 || k === catRaw;
+      })[0];
+      if (!catKey) { errors.push("Row " + (idx + 2) + ": category \"" + row[mapping.category] + "\" not recognised"); return; }
+
+      var typeRaw = (row[mapping.type] || "").toLowerCase();
+      var itemKey = Object.keys(FACTORS[catKey].items).filter(function (k) {
+        return FACTORS[catKey].items[k].label.toLowerCase().indexOf(typeRaw) >= 0 || typeRaw.indexOf(k) >= 0 || k === typeRaw;
+      })[0];
+      if (!itemKey) { errors.push("Row " + (idx + 2) + ": type \"" + row[mapping.type] + "\" not recognised"); return; }
+
+      var qty = parseFloat(row[mapping.quantity]);
+      if (!qty || qty <= 0) { errors.push("Row " + (idx + 2) + ": quantity missing or invalid"); return; }
+
+      var entry = makeEntry({ category: catKey, subtype: itemKey, qty: qty, facilityId: facility.id, date: dateVal, note: "CSV import" });
+      state.entries.push(entry);
+      imported++;
+    });
+
+    persist();
+    refreshFacilitySelects();
+    renderFacilityList();
+    logAudit("Imported " + imported + " entries via CSV bulk upload (" + errors.length + " skipped)");
+    var summary = imported + " row" + (imported === 1 ? "" : "s") + " imported, " + errors.length + " skipped.";
+    if (errors.length) summary += " " + errors.slice(0, 5).join("; ") + (errors.length > 5 ? " …" : "");
+    document.getElementById("csvImportSummary").textContent = summary;
+    renderAll();
+  });
+
+  // ---------- ERP connector (simulated) ----------
+  document.getElementById("syncErpBtn").addEventListener("click", function () {
+    if (currentRole() === "viewer") return;
+    var pool = [
+      { category: "combustion", subtype: "diesel", range: [50, 300] },
+      { category: "electricity", subtype: "grid", range: [800, 6000] },
+      { category: "travel", subtype: "flight_domestic", range: [300, 1500] },
+      { category: "goods", subtype: "it_equipment", range: [20, 150] }
+    ];
+    var count = 0;
+    pool.forEach(function (p) {
+      var qty = Math.round((p.range[0] + Math.random() * (p.range[1] - p.range[0])) * 10) / 10;
+      var facility = state.facilities[Math.floor(Math.random() * state.facilities.length)];
+      var d = new Date();
+      d.setDate(d.getDate() - Math.floor(Math.random() * 30));
+      var entry = makeEntry({ category: p.category, subtype: p.subtype, qty: qty, facilityId: facility.id, date: d.toISOString().slice(0, 10), note: "SystemETA sync (demo)" });
+      state.entries.push(entry);
+      count++;
+    });
+    persist();
+    logAudit("Synced " + count + " entries from SystemETA connector (demo)");
+    document.getElementById("erpSyncSummary").textContent = "Synced " + count + " entries just now — see Data Entry for details.";
+    renderAll();
+  });
+
+  function downloadBlob(content, mime, filename) {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- Factor library view ----------
+  function renderFactorTable() {
+    var body = document.getElementById("factorBody");
+    body.innerHTML = "";
+    Object.keys(FACTORS).forEach(function (catKey) {
+      var cat = FACTORS[catKey];
+      Object.keys(cat.items).forEach(function (k) {
+        var item = cat.items[k];
+        var factorDisplay = item.factor === null
+          ? fmt(state.org.gridFactor, 3) + " (location) / " + fmt(state.org.marketFactor, 3) + " (market)"
+          : fmt(item.factor, item.factor > 100 ? 0 : 3);
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          '<td>' + cat.label + '</td>' +
+          '<td>' + item.label + '</td>' +
+          '<td class="num">' + factorDisplay + '</td>' +
+          '<td>' + item.unit + '</td>' +
+          '<td>' + item.source + '</td>';
+        body.appendChild(tr);
+      });
+    });
+  }
+
+  // ---------- Helpers over entries ----------
+  function filteredEntries() {
+    var fid = document.getElementById("facilityFilter").value;
+    return fid === "all" ? state.entries : state.entries.filter(function (e) { return e.facilityId === fid; });
+  }
+  function co2Of(e) {
+    return document.getElementById("scope2Method").value === "market" ? e.co2Market : e.co2Location;
+  }
+  function facilityName(id) {
+    var f = state.facilities.filter(function (x) { return x.id === id; })[0];
+    return f ? f.name : "—";
+  }
+
+  // ---------- Stats ----------
+  function renderStats() {
+    var list = filteredEntries();
+    var total = 0, s1 = 0, s2 = 0, s3 = 0;
+    list.forEach(function (e) {
+      var v = co2Of(e);
+      total += v;
+      if (e.scope === 1) s1 += v;
+      if (e.scope === 2) s2 += v;
+      if (e.scope === 3) s3 += v;
+    });
+    var perEmployee = state.org.employees ? (total / state.org.employees) : 0;
+    var perRevenue = state.org.revenueCr ? (total / 1000 / state.org.revenueCr) : 0;
+
+    var cards = [
+      { label: "Total CO₂e", value: fmt(total / 1000, 2), unit: "t", dot: "var(--accent)", note: state.org.year + " reporting period" },
+      { label: "Scope 1", value: fmt(s1, 0), unit: "kg", dot: "var(--scope1)", note: "combustion + refrigerants" },
+      { label: "Scope 2", value: fmt(s2, 0), unit: "kg", dot: "var(--scope2)", note: document.getElementById("scope2Method").value === "market" ? "market-based" : "location-based" },
+      { label: "Scope 3", value: fmt(s3, 0), unit: "kg", dot: "var(--scope3)", note: "goods · travel · commute" },
+      { label: "Intensity", value: fmt(perEmployee, 1), unit: "kg/employee", dot: "var(--muted)", note: fmt(perRevenue, 3) + " t / ₹cr revenue" }
+    ];
+    var grid = document.getElementById("statGrid");
+    grid.innerHTML = "";
+    cards.forEach(function (c) {
+      var el = document.createElement("div");
+      el.className = "stat-card";
+      el.innerHTML =
+        '<div class="stat-label"><span class="dot" style="background:' + c.dot + ';"></span>' + c.label + '</div>' +
+        '<div class="stat-value num">' + c.value + ' <small>' + c.unit + '</small></div>' +
+        '<div class="stat-note">' + c.note + '</div>';
+      grid.appendChild(el);
+    });
+  }
+
+  // ---------- Trend chart ----------
+  function renderChart() {
+    var canvas = document.getElementById("trendChart");
+    var ctx = canvas.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = canvas.clientWidth || 400, cssH = 150;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    var list = filteredEntries();
+    var months = [];
+    var now = new Date();
+    for (var i = 11; i >= 0; i--) {
+      var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toISOString().slice(0, 7));
+    }
+    var byMonth = {};
+    months.forEach(function (m) { byMonth[m] = 0; });
+    list.forEach(function (e) {
+      var m = e.date.slice(0, 7);
+      if (byMonth[m] !== undefined) byMonth[m] += co2Of(e);
+    });
+    var values = months.map(function (m) { return byMonth[m]; });
+    var maxVal = Math.max.apply(null, values.concat([1]));
+
+    var padL = 6, padR = 6, padT = 10, padB = 18;
+    var w = cssW - padL - padR, h = cssH - padT - padB;
+
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    for (var g = 0; g <= 3; g++) {
+      var gy = padT + (h / 3) * g;
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + w, gy); ctx.stroke();
+    }
+
+    var stepX = w / (values.length - 1);
+    function xAt(i) { return padL + stepX * i; }
+    function yAt(v) { return padT + h - (v / maxVal) * h; }
+
+    ctx.beginPath();
+    ctx.moveTo(xAt(0), padT + h);
+    values.forEach(function (v, i) { ctx.lineTo(xAt(i), yAt(v)); });
+    ctx.lineTo(xAt(values.length - 1), padT + h);
+    ctx.closePath();
+    var grad = ctx.createLinearGradient(0, padT, 0, padT + h);
+    grad.addColorStop(0, "rgba(53,208,166,0.35)");
+    grad.addColorStop(1, "rgba(53,208,166,0)");
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.beginPath();
+    values.forEach(function (v, i) {
+      var x = xAt(i), y = yAt(v);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = "#35d0a6";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    var lastX = xAt(values.length - 1), lastY = yAt(values[values.length - 1]);
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#35d0a6";
+    ctx.fill();
+
+    ctx.fillStyle = "#8992a6";
+    ctx.font = "10px -apple-system, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(months[0].slice(2), padL, cssH - 4);
+    ctx.textAlign = "right";
+    ctx.fillText(months[months.length - 1].slice(2), padL + w, cssH - 4);
+  }
+
+  // ---------- Site breakdown ----------
+  function renderSiteBreakdown() {
+    var list = filteredEntries();
+    var totals = {};
+    var grand = 0;
+    state.facilities.forEach(function (f) { totals[f.id] = 0; });
+    list.forEach(function (e) { totals[e.facilityId] = (totals[e.facilityId] || 0) + co2Of(e); grand += co2Of(e); });
+
+    var wrap = document.getElementById("siteBreakdown");
+    wrap.innerHTML = "";
+    if (!grand) {
+      wrap.innerHTML = '<div class="empty-note">No entries yet.</div>';
+      return;
+    }
+    state.facilities.forEach(function (f) {
+      var v = totals[f.id] || 0;
+      var pct = grand ? (v / grand) * 100 : 0;
+      var row = document.createElement("div");
+      row.className = "bd-row";
+      row.innerHTML =
+        '<span>' + f.name + '</span>' +
+        '<span class="bd-track"><span class="bd-fill" style="width:' + pct.toFixed(1) + '%; background: var(--accent);"></span></span>' +
+        '<span class="bd-value num">' + fmt(v, 0) + '</span>';
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------- Scope 3 by category ----------
+  function renderScope3Breakdown() {
+    var list = filteredEntries();
+    var totals = { goods: 0, travel: 0, commute: 0 };
+    var grand = 0;
+    list.forEach(function (e) {
+      if (totals[e.category] !== undefined) { var v = co2Of(e); totals[e.category] += v; grand += v; }
+    });
+    var labels = { goods: "Purchased Goods", travel: "Business Travel", commute: "Employee Commute" };
+    var wrap = document.getElementById("scope3Breakdown");
+    wrap.innerHTML = "";
+    if (!grand) {
+      wrap.innerHTML = '<div class="empty-note">No Scope 3 entries yet.</div>';
+      return;
+    }
+    Object.keys(labels).forEach(function (k) {
+      var v = totals[k] || 0;
+      var pct = grand ? (v / grand) * 100 : 0;
+      var row = document.createElement("div");
+      row.className = "bd-row";
+      row.innerHTML =
+        '<span>' + labels[k] + '</span>' +
+        '<span class="bd-track"><span class="bd-fill" style="width:' + pct.toFixed(1) + '%; background: var(--scope3);"></span></span>' +
+        '<span class="bd-value num">' + fmt(v, 0) + '</span>';
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------- Year-on-year ----------
+  function renderYoy() {
+    var byYear = {};
+    state.entries.forEach(function (e) { var y = e.date.slice(0, 4); byYear[y] = (byYear[y] || 0) + e.co2Location; });
+    var curY = String(state.org.year), prevY = String(state.org.year - 1);
+    var cur = byYear[curY] || 0, prev = byYear[prevY] || 0;
+    var maxV = Math.max(cur, prev, 1);
+    var delta = prev ? ((cur - prev) / prev * 100) : null;
+    var wrap = document.getElementById("yoyPanel");
+    wrap.innerHTML =
+      '<div class="bd-row"><span>' + prevY + '</span><span class="bd-track"><span class="bd-fill" style="width:' + ((prev / maxV) * 100).toFixed(1) + '%; background: var(--muted-2);"></span></span><span class="bd-value num">' + fmt(prev, 0) + '</span></div>' +
+      '<div class="bd-row"><span>' + curY + '</span><span class="bd-track"><span class="bd-fill" style="width:' + ((cur / maxV) * 100).toFixed(1) + '%; background: var(--accent);"></span></span><span class="bd-value num">' + fmt(cur, 0) + '</span></div>' +
+      '<p class="stat-note" style="margin-top:0.6rem;">' + (delta === null ? "No data logged for " + prevY + " yet." : ((delta >= 0 ? "+" : "") + fmt(delta, 1) + "% vs " + prevY)) + '</p>';
+  }
+
+  // ---------- Audit log ----------
+  function renderAudit() {
+    var body = document.getElementById("auditBody");
+    body.innerHTML = "";
+    if (!state.audit.length) {
+      body.innerHTML = '<tr><td colspan="3" class="empty-note">No activity yet.</td></tr>';
+      return;
+    }
+    state.audit.forEach(function (a) {
+      var tr = document.createElement("tr");
+      tr.innerHTML = '<td class="num">' + a.ts + '</td><td>' + a.actor + '</td><td>' + a.action + '</td>';
+      body.appendChild(tr);
+    });
+  }
+
+  // ---------- Entry table ----------
+  function renderEntryTable() {
+    var body = document.getElementById("entryBody");
+    body.innerHTML = "";
+    var list = filteredEntries().slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    document.getElementById("entryCount").textContent = list.length + (list.length === 1 ? " total" : " total");
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="5" class="empty-note">No entries yet — add one on the left.</td></tr>';
+      return;
+    }
+    list.slice(0, 60).forEach(function (e) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td class="num">' + e.date + '</td>' +
+        '<td>' + e.label + ' <span class="scope-chip" style="background:' + SCOPE_COLOR[e.scope] + '22;color:' + SCOPE_COLOR[e.scope] + ';">S' + e.scope + '</span>' + (e.note ? '<div class="row-note">' + e.note + '</div>' : '') + '</td>' +
+        '<td>' + facilityName(e.facilityId) + '</td>' +
+        '<td class="num" style="text-align:right;">' + fmt(co2Of(e), 1) + '</td>' +
+        '<td><button class="del-btn" data-id="' + e.id + '">✕</button></td>';
+      body.appendChild(tr);
+    });
+    body.querySelectorAll(".del-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (currentRole() === "viewer") return;
+        var id = btn.dataset.id;
+        var removed = state.entries.filter(function (e) { return e.id === id; })[0];
+        state.entries = state.entries.filter(function (e) { return e.id !== id; });
+        if (removed) logAudit("Deleted entry — " + removed.label);
+        persist();
+        renderAll();
+      });
+    });
+  }
+
+  // ---------- Reports ----------
+  function reportTotals() {
+    var t = { s1: 0, s2loc: 0, s2mkt: 0, goods: 0, travel: 0, commute: 0 };
+    state.entries.forEach(function (e) {
+      if (e.scope === 1) t.s1 += e.co2Location;
+      else if (e.scope === 2) { t.s2loc += e.co2Location; t.s2mkt += e.co2Market; }
+      else if (e.category === "goods") t.goods += e.co2Location;
+      else if (e.category === "travel") t.travel += e.co2Location;
+      else if (e.category === "commute") t.commute += e.co2Location;
+    });
+    return t;
+  }
+
+  function renderEvidenceSummary() {
+    var submitted = state.suppliers.filter(function (s) { return s.status === "submitted"; }).length;
+    document.getElementById("evidenceSummary").innerHTML =
+      state.entries.length + ' activity entries logged across ' + state.facilities.length + ' facilities · ' +
+      submitted + ' of ' + state.suppliers.length + ' supplier questionnaires returned · ' +
+      state.audit.length + ' audit-trail actions recorded.';
+  }
+
+  function downloadReport(type) {
+    var t = reportTotals();
+    var totalLoc = t.s1 + t.s2loc + t.goods + t.travel + t.commute;
+    var perEmployee = state.org.employees ? totalLoc / state.org.employees : 0;
+    var perRevenue = state.org.revenueCr ? (totalLoc / 1000) / state.org.revenueCr : 0;
+    var title = type === "brsrcore" ? "BRSR Core — Draft Disclosure Export" : "GHG Protocol Corporate Emissions Report";
+
+    var rowsHtml = type === "brsrcore"
+      ? '<tr><td>Scope 1 (Direct)</td><td>' + fmt(t.s1, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td>Scope 2 (Location-based)</td><td>' + fmt(t.s2loc, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td>Scope 2 (Market-based)</td><td>' + fmt(t.s2mkt, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td><b>Total (Scope 1+2, location-based)</b></td><td><b>' + fmt(t.s1 + t.s2loc, 0) + ' kg CO₂e</b></td></tr>'
+      : '<tr><td>Scope 1 — Direct</td><td>' + fmt(t.s1, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td>Scope 2 — Location-based</td><td>' + fmt(t.s2loc, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td>Scope 2 — Market-based</td><td>' + fmt(t.s2mkt, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td>Scope 3 — Purchased goods & services</td><td>' + fmt(t.goods, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td>Scope 3 — Business travel</td><td>' + fmt(t.travel, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td>Scope 3 — Employee commute</td><td>' + fmt(t.commute, 0) + ' kg CO₂e</td></tr>' +
+        '<tr><td><b>Total (location-based)</b></td><td><b>' + fmt(totalLoc, 0) + ' kg CO₂e</b></td></tr>';
+
+    var facRows = state.facilities.map(function (f) { return "<li>" + f.name + " — " + f.city + "</li>"; }).join("");
+    var submitted = state.suppliers.filter(function (s) { return s.status === "submitted"; }).length;
+
+    var html = '<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title>' +
+      '<style>body{font-family:Georgia,serif;max-width:720px;margin:2.5rem auto;padding:0 1.5rem;color:#1a1a1a;line-height:1.6;}' +
+      'h1{font-size:1.6rem;} table{border-collapse:collapse;width:100%;margin:1rem 0;} td{padding:0.5rem 0.7rem;border-bottom:1px solid #ddd;}' +
+      '.meta{color:#555;font-size:0.9rem;} .foot{margin-top:2rem;font-size:0.8rem;color:#777;border-top:1px solid #ddd;padding-top:1rem;}</style></head><body>' +
+      '<h1>' + title + '</h1>' +
+      '<p class="meta">' + state.org.name + ' &middot; Reporting year ' + state.org.year + ' &middot; Base year ' + state.org.baseYear + ' &middot; Consolidation: operational control</p>' +
+      '<h3>Facilities in boundary</h3><ul>' + facRows + '</ul>' +
+      '<h3>Emissions summary</h3><table>' + rowsHtml + '</table>' +
+      '<h3>Intensity</h3><p>' + fmt(perEmployee, 1) + ' kg CO₂e per employee &middot; ' + fmt(perRevenue, 3) + ' t CO₂e per ₹ crore revenue</p>' +
+      '<h3>Evidence pack</h3><p>' + state.entries.length + ' activity entries logged &middot; ' + submitted + ' of ' + state.suppliers.length + ' supplier questionnaires returned &middot; ' + state.audit.length + ' audit-trail actions recorded.</p>' +
+      '<div class="foot">Generated ' + new Date().toLocaleString() + ' by the Carbon Footprint prototype. Draft for internal review — not a certified regulatory filing.</div>' +
+      '</body></html>';
+
+    downloadBlob(html, "text/html", type === "brsrcore" ? "brsr-core-export.html" : "ghg-protocol-report.html");
+    logAudit("Downloaded " + title);
+  }
+
+  document.querySelectorAll("[data-report]").forEach(function (btn) {
+    btn.addEventListener("click", function () { downloadReport(btn.dataset.report); });
+  });
+
+  document.getElementById("facilityFilter").addEventListener("change", renderAll);
+
+  function renderAll() {
+    renderStats();
+    renderChart();
+    renderSiteBreakdown();
+    renderScope3Breakdown();
+    renderYoy();
+    renderAudit();
+    renderEntryTable();
+    renderFactorTable();
+    renderSuppliers();
+    renderEvidenceSummary();
+    applyRoleGate();
+  }
+
+  window.addEventListener("resize", renderChart);
+
+  refreshFacilitySelects();
+  loadOrgForm();
+  renderFacilityList();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>
